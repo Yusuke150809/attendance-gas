@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+  </head>
+  <body>
+    <div class="company-title">開発塾 - 授業分析ページ</div>
+
+    <p>ここは <b>授業分析ページ </b> です。</p>
+    <p>後で授業データの集計やグラフを入れます。</p>
+
+    <div class="btn-frame" style="margin-top:16px;">
+      <a href="<?= getAppUrl() ?>?page=admin">塾長メニューに戻る</a>
+      <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+    </div>
+  </body>
+</html>
+

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+  </head>
+  <body>
+    <!-- 会社タイトル -->
+    <div class="company-title">開発塾</div>
+
+    <!-- 生徒用ページ -->
+    <div class="emp-list" style="margin-bottom:16px;">
+      <h3>生徒用ページ</h3>
+      <div class="emp-card-wrap">
+        <a class="emp-card" href="<?= getAppUrl() ?>?page=students">
+          <span class="emp-id">STU</span>
+          <span class="emp-name">生徒ページへ</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 従業員用ページ -->
+    <div class="emp-list" style="margin-bottom:16px;">
+      <h3>従業員用ページ</h3>
+      <div class="emp-card-wrap">
+        <a class="emp-card" href="<?= getAppUrl() ?>?page=employees">
+          <span class="emp-id">EMP</span>
+          <span class="emp-name">従業員ページへ</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 塾長ページ -->
+    <div class="emp-list">
+      <h3>塾長ページ</h3>
+      <div class="emp-card-wrap">
+        <a class="emp-card" href="<?= getAppUrl() ?>?page=admin&from=home">
+  <span class="emp-id">ADM</span>
+  <span class="emp-name">塾長ページへ</span>
+</a>
+
+        
+      </div>
+    </div>
+  </body>
+</html>

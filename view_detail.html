@@ -1,0 +1,270 @@
+`view_detail.html`の内容を完全に復元しました。
+
+-----
+
+### `view_detail.html`
+
+```html
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+    <script>
+      // ページ遷移を抑止
+      function preventFormSubmit() {
+        var forms = document.querySelectorAll('form');
+        for (var i = 0; i < forms.length; i++) {
+          forms[i].addEventListener('submit', function(event) {
+            event.preventDefault();
+          });
+        }
+      }
+      window.addEventListener('load', preventFormSubmit);
+
+      // 勤怠登録
+      function handleWorkRecordFormSubmit(formObject) {
+        updateWRMessage('更新中…');
+        google.script.run
+          .withSuccessHandler(function(msg){
+            updateWRMessage(msg || '登録しました');
+            refreshTimeClocks();
+          })
+          .withFailureHandler(function(err){
+            updateWRMessage('エラー: ' + (err && err.message ? err.message : err));
+          })
+          .saveWorkRecord(formObject);
+      }
+      function updateWRMessage(message) {
+        document.getElementById('wr_submit_message').innerHTML = message;
+      }
+
+      // 勤怠削除（カスタムモーダル）
+      function showPasswordBox(){
+        document.getElementById("pwBox").style.display = "block";
+      }
+      function hidePasswordBox(){
+        document.getElementById("pwBox").style.display = "none";
+      }
+      function confirmDelete(){
+        var pw = document.getElementById("deletePw").value;
+        hidePasswordBox();
+        if (!pw) { updateWRMessage("パスワード未入力です"); return; }
+        updateWRMessage('削除中…');
+        google.script.run
+          .withSuccessHandler(function(msg){
+            updateWRMessage(msg || '削除しました');
+            refreshTimeClocks();
+          })
+          .withFailureHandler(function(err){
+            updateWRMessage('エラー: ' + (err && err.message ? err.message : err));
+          })
+          .deleteLastWorkWithPassword(pw);
+      }
+
+      // 生徒名フィルタ
+      function filterByStudent(q){
+        var query = (q || '').trim().toLowerCase();
+        var rows  = document.querySelectorAll('tbody tr.wr-row');
+        var hit = 0;
+        rows.forEach(function(tr){
+          var name = (tr.getAttribute('data-student') || '').toLowerCase();
+          var show = !query || name.indexOf(query) >= 0;
+          tr.style.display = show ? '' : 'none';
+          if (show) hit++;
+        });
+        var counter = document.getElementById('filter_count');
+        if (counter){
+          var total = rows.length;
+          counter.textContent = query ? (hit + ' / ' + total + ' 件表示') : (total + ' 件');
+        }
+      }
+      function clearStudentFilter(){
+        var input = document.getElementById('studentFilterInput');
+        if (input){
+          input.value = '';
+          filterByStudent('');
+          input.focus();
+        }
+      }
+
+      //従業員名フィルター
+      function filterEmployees(q){
+        var query = (q || '').trim().toLowerCase();
+        var cards = document.querySelectorAll('.emp-card');
+        var hit = 0;
+        cards.forEach(function(card){
+          var name = (card.getAttribute('data-name') || '').toLowerCase();
+          var show = !query || name.indexOf(query) >= 0;
+          card.style.display = show ? '' : 'none';
+          if (show) hit++;
+        });
+        var counter = document.getElementById('emp_filter_count');
+        if (counter){
+          var total = cards.length;
+          counter.textContent = query ? (hit + ' / ' + total + ' 件表示') : (total + ' 件');
+        }
+      }
+      function clearEmpFilter(){
+        var input = document.getElementById('empFilterInput');
+        if (input){
+          input.value = '';
+          filterEmployees('');
+          input.focus();
+        }
+      }
+
+      // 勤怠一覧再描画
+      function refreshTimeClocks(){
+        google.script.run
+          .withSuccessHandler(renderTimeClocks)
+          .getTimeClocks();
+      }
+      function renderTimeClocks(record){
+        var tbody = document.querySelector('tbody');
+        if (!tbody) return;
+        var appUrl = "<?= getAppUrl() ?>";
+        var empId  = "<?= getSelectedEmpId() ?>";
+        if (!record || !record.length) {
+          tbody.innerHTML = '<tr><td colspan="6">データがありません</td></tr>';
+          document.getElementById('filter_count').textContent = '0 件';
+          return;
+        }
+        var html = '';
+        record.forEach(function(r, idx){
+          var url = appUrl + '?empId=' + encodeURIComponent(empId)
+                             + '&student=' + encodeURIComponent(r.student || '');
+          html += '<tr class="wr-row" data-student="' + (r.student || '') + '">'
+                +   '<td>' + (r.type || '') + '</td>'
+                +   '<td>' + (r.date || '') + '</td>'
+                +   '<td>' + (r.subject || '') + '</td>'
+                +   '<td class="col-workingtime">' + (r.workingtime || '') + '</td>'
+                +   '<td class="col-student">'
+                +     (r.student ? ('<a href="' + url + '">' + r.student + '</a>') : '')
+                +   '</td>'
+                +   '<td>'
+                +     (r.type === "退勤"
+                       ? '<input type="text" id="fb_'+idx+'" value="'+(r.feedback||'')+'" '
+                         + 'style="width:120px;" placeholder="フィードバック" '
+                         + 'oninput="saveFeedbackRow('+r.row+', this.value)">'
+                       : (r.feedback || ''))
+                +   '</td>'
+                + '</tr>';
+        });
+        tbody.innerHTML = html;
+        document.getElementById('filter_count').textContent = record.length + ' 件';
+      }
+    </script>
+  </head>
+
+  <body>
+    <div>
+      <span>名前:</span>
+      <span><?= getEmployeeName() ?></span>
+    </div>
+
+    <div>
+      <h3>今月のタイムレコーダー履歴</h3>
+      <div style="margin:8px 0 12px; display:flex; gap:8px; align-items:center;">
+        <input id="studentFilterInput" type="text" placeholder="生徒名で絞り込み"
+               oninput="filterByStudent(this.value)" />
+        <button type="button" class="btn" onclick="clearStudentFilter()">クリア</button>
+        <span id="filter_count" style="font-size:12px; opacity:.75;"></span>
+      </div>
+      <table border="1">
+        <thead>
+          <tr>
+            <th>種別</th><th>日時</th><th>科目</th>
+            <th class="col-workingtime">総労働</th>
+            <th class="col-student">生徒名</th>
+            <th class="col-feedback">フィードバック</th> 
+          </tr>
+        </thead>
+        <tbody>
+         <? var record = getTimeClocks();
+            var appUrl = getAppUrl();
+            var empId  = getSelectedEmpId();
+            for (var i=0;i<record.length;i++){ 
+              var r = record[i];
+              var url = appUrl + '?page=feedback_emp'
+                                 + '&empId=' + encodeURIComponent(empId)
+                                 + '&student=' + encodeURIComponent(r.student || '');
+         ?>
+          <tr class="wr-row" data-student="<?= r.student ?>">
+            <td><?= r.type ?></td>
+            <td><?= r.date ?></td>
+            <td><?= r.subject ?></td>
+            <td><?= r.workingtime ?></td>
+            <td>
+              <? if (r.student) { ?>
+                <a href="<?= url ?>"><?= r.student ?></a>
+              <? } ?>
+            </td>
+            <td>
+              <? if (r.type === "退勤") { ?>
+                <input type="text" id="fb_<?= i ?>" value="<?= r.feedback || '' ?>"
+                       style="width:66%; text-align:center; display:block; margin:0 auto;"
+                       placeholder="未回答"
+                       oninput="saveFeedbackRow(<?= r.row ?>, 'fb_<?= i ?>')">
+              <? } else { ?>
+                <?= r.feedback || '' ?>
+              <? } ?>
+            </td>
+          </tr>
+        <? } ?>
+        </tbody>
+      </table>
+    </div>
+
+    <div>
+      <h3>タイムレコーダー</h3>
+      <form id="workRecordForm" onsubmit="return false;">
+        <div>
+          <label>対象日時: </label>
+          <input type="date" name="target_date"/>
+          <input type="time" name="target_time"/>
+          <br/>
+          <label>登録種別</label>
+          <select name="target_type">
+            <option value="clock_in">出勤</option>
+            <option value="break_begin">休憩開始</option>
+            <option value="break_end">休憩終了</option>
+            <option value="clock_out">退勤</option>
+          </select>
+          <br/>
+          <label>科目</label>
+          <select name="subject">
+            <option value="">（その他）</option>
+            <option value="国語">国語</option>
+            <option value="算数">算数</option>
+            <option value="理科">理科</option>
+            <option value="社会">社会</option>
+            <option value="英語">英語</option>
+          </select>
+          <label style="margin-left:12px;">生徒名</label>
+          <input type="text" name="student" maxlength="4" placeholder="4文字" />
+
+          <div class="btn-frame">
+            <button type="button" class="btn"
+                    onclick="handleWorkRecordFormSubmit(this.form)">登録</button>
+            <button type="button" onclick="showPasswordBox()" class="btn">勤怠削除</button>
+            <div id="wr_submit_message"></div>
+          </div>
+        </div>
+      </form>
+      <div class="btn-frame">
+        <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+      </div>
+    </div>
+
+    <div id="pwBox" style="display:none; position:fixed; top:40%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:16px; border:1px solid #ccc; border-radius:6px; box-shadow:0 2px 8px rgba(0,0,0,.2);">
+      <p>削除用パスワードを入力してください：</p>
+      <input type="password" id="deletePw" style="width:100%; margin-bottom:8px;">
+      <div style="text-align:right;">
+        <button onclick="confirmDelete()">OK</button>
+        <button onclick="hidePasswordBox()">キャンセル</button>
+      </div>
+    </div>
+  </body>
+</html>
+```

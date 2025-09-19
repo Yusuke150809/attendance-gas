@@ -1,0 +1,159 @@
+<style>
+  body {
+    color:#333;                 
+    background:#f8f9fb;    /* カラー選択ツールから */   
+    font-family:'Segoe UI','Helvetica Neue',sans-serif;
+  }
+
+  table {
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,.05);
+    border:1px solid #e5e7eb;
+    width:100%;
+  } /* 表の見た目を改善 */
+
+  th, td {
+    padding:8px 12px;
+    border-bottom:1px solid #e5e7eb;
+  }
+  thead th {
+    background:#2d87ff;  
+    color:#fff;           
+  }
+  tbody tr:nth-child(even) {
+    background:#f4f8ff;   
+  }
+
+  /* キャンセルボタン */
+  .btn-cancel {
+    display:inline-block;
+    text-align:center;
+    background:#ccc;
+    color:#333;
+    border:none;
+    border-radius:6px;
+    padding:8px 14px;
+    font-size:14px;
+    cursor:pointer;
+    text-decoration:none; /* 下線消す */
+  }
+  .btn-cancel:hover {
+    background:#bbb;
+  }
+
+  /* ★リンク色を整える */
+  a {
+    color:#2d87ff;
+    text-decoration:none;
+  }
+  a:hover { text-decoration:underline; }
+
+  /* ★入力系のトーンを統一 */
+  input[type="text"], select, input[type="date"], input[type="time"] {
+    border:1px solid #cbd5e1;
+    border-radius:6px;
+    padding:6px 8px;
+    background:#fff;
+  }
+
+  /* ★ボタンを青基調に（.btn も上書き） */
+  .btn, button, input[type="submit"] {
+    background:#2d87ff;
+    color:#fff;
+    border:none;
+    border-radius:8px;
+    padding:10px 16px;
+    width:auto;           
+    min-width:140px;
+    cursor:pointer;
+    box-shadow:0 2px 6px rgba(45,135,255,.25);
+    transition:background .15s ease, transform .05s ease;
+  }
+  .btn:hover, button:hover, input[type="submit"]:hover {
+    background:#1c5fc9;
+    transform:translateY(-1px);
+  }
+
+  /* 会社タイトル（ロゴ風） */
+  .company-title {
+    font-family: 'Segoe UI', 'Helvetica Neue', sans-serif;
+    font-size: 48px;
+    font-weight: 900;
+    color: #333;
+    margin: 8px 0 24px;
+    text-align: center;
+    letter-spacing: 0.05em;
+  }
+
+  /* 従業員カード一覧 */
+  .emp-list h3 {
+    margin: 12px 0 8px;
+  }
+  .emp-card-wrap {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .emp-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    min-width: 220px;
+    border: 2px solid #2d87ff;
+    border-radius: 12px;
+    background: #fff;
+    text-decoration: none;   /* リンクの下線消す */
+    color: #111;            /* テキスト色 */
+    font-weight: 700;
+    transition: transform .05s ease, box-shadow .15s ease;
+  }
+  .emp-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(0,0,0,.08);
+  }
+  .emp-id {
+    background: #2d87ff;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 800;
+  }
+  .emp-name {
+    white-space: nowrap;
+  }
+
+  .col-student {
+    width: 5.5ch;        
+    max-width: 5.5ch;
+    white-space: nowrap;
+    text-align: left;
+  } 
+  input[name="student"] {
+    width: 5.5ch;
+  }
+
+  
+  @media (max-width: 600px) {
+  body {
+    font-size: 280px; /* 本文ドデカ文字 */
+    line-height: 1.6;
+  }
+  .btn,
+  input,
+  select,
+  textarea {
+    font-size: 260px;  /* 入力欄・ボタンスーパーサイズ */
+    padding: 200px;    /* 分厚すぎる余白 */
+  }
+  table {
+    font-size: 260px;  /* 表の文字も超巨大 */
+  }
+  th, td {
+    padding: 180px 240px; /* 表のセルも広大に */
+  }
+}
+
+
+
+</style>
