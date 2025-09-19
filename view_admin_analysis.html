@@ -50,6 +50,54 @@
         margin-bottom: 15px;
         color: #333;
       }
+      .ranking-container {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+        overflow: hidden;
+      }
+      .ranking-tabs {
+        display: flex;
+        background: #f8f9fa;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .tab-button {
+        flex: 1;
+        padding: 15px 20px;
+        border: none;
+        background: transparent;
+        font-size: 1rem;
+        font-weight: 500;
+        color: #666;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .tab-button:hover {
+        background: rgba(45, 135, 255, 0.1);
+        color: #2d87ff;
+      }
+      .tab-button.active {
+        background: #2d87ff;
+        color: white;
+      }
+      .ranking-content {
+        position: relative;
+      }
+      .ranking-panel {
+        padding: 20px;
+        display: none;
+      }
+      .ranking-panel.active {
+        display: block;
+      }
+      .ranking-subtitle {
+        font-size: 0.9rem;
+        color: #666;
+        margin-bottom: 20px;
+        font-style: italic;
+      }
       .chart-row {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -64,6 +112,9 @@
       @media (max-width: 768px) {
         .chart-row {
           grid-template-columns: 1fr;
+        }
+        .ranking-tabs {
+          flex-direction: column;
         }
       }
     </style>
@@ -92,45 +143,40 @@
         </div>
       </div>
 
-      <!-- チャート表示エリア -->
-      <div class="chart-row">
-        <div class="chart-container">
-          <div class="chart-title">科目別回答数</div>
-          <canvas id="subjectChart" width="400" height="300"></canvas>
+      <!-- ランキング表示エリア -->
+      <div class="ranking-container">
+        <div class="ranking-tabs">
+          <button class="tab-button active" onclick="showRanking('clarity')">分かりやすさ</button>
+          <button class="tab-button" onclick="showRanking('satisfaction')">満足度</button>
+          <button class="tab-button" onclick="showRanking('pace')">ペース</button>
+          <button class="tab-button" onclick="showRanking('fun')">楽しさ</button>
         </div>
-        <div class="chart-container">
-          <div class="chart-title">従業員別回答数</div>
-          <canvas id="employeeChart" width="400" height="300"></canvas>
+        
+        <div class="ranking-content">
+          <div class="ranking-panel active" id="clarity-panel">
+            <div class="chart-title">分かりやすさランキング</div>
+            <div class="ranking-subtitle">「授業内容や説明は分かりやすかったですか？」の「分かりやすかった」回答割合</div>
+            <canvas id="clarityChart" width="800" height="400"></canvas>
+          </div>
+          
+          <div class="ranking-panel" id="satisfaction-panel">
+            <div class="chart-title">授業満足度ランキング</div>
+            <div class="ranking-subtitle">「今日の授業に満足しましたか？」の「満足した」回答割合</div>
+            <canvas id="satisfactionChart" width="800" height="400"></canvas>
+          </div>
+          
+          <div class="ranking-panel" id="pace-panel">
+            <div class="chart-title">授業ペースランキング</div>
+            <div class="ranking-subtitle">「授業のペースはどう感じましたか？」の「ちょうどよかった」回答割合</div>
+            <canvas id="paceChart" width="800" height="400"></canvas>
+          </div>
+          
+          <div class="ranking-panel" id="fun-panel">
+            <div class="chart-title">楽しさランキング</div>
+            <div class="ranking-subtitle">「授業は楽しかったですか？」の「楽しかった」回答割合</div>
+            <canvas id="funChart" width="800" height="400"></canvas>
+          </div>
         </div>
-      </div>
-
-      <div class="chart-row">
-        <div class="chart-container">
-          <div class="chart-title">生徒別回答数</div>
-          <canvas id="studentChart" width="400" height="300"></canvas>
-        </div>
-        <div class="chart-container">
-          <div class="chart-title">月別回答推移</div>
-          <canvas id="timeChart" width="400" height="300"></canvas>
-        </div>
-      </div>
-
-      <!-- 詳細データテーブル -->
-      <div class="chart-container">
-        <div class="chart-title">科目別詳細データ</div>
-        <table id="subjectTable" style="width: 100%;">
-          <thead>
-            <tr>
-              <th>科目</th>
-              <th>回答数</th>
-              <th>担当従業員数</th>
-              <th>受講生徒数</th>
-            </tr>
-          </thead>
-          <tbody id="subjectTableBody">
-            <tr><td colspan="4" class="loading">読み込み中...</td></tr>
-          </tbody>
-        </table>
       </div>
 
       <div class="btn-frame" style="margin-top:30px; text-align: center;">
@@ -141,7 +187,8 @@
 
     <script>
       // チャート変数
-      let subjectChart, employeeChart, studentChart, timeChart;
+      let clarityChart, satisfactionChart, paceChart, funChart;
+      let rankingData = {};
 
       // ページ読み込み時に分析データを取得
       window.addEventListener('load', function() {
@@ -149,31 +196,49 @@
       });
 
       function loadAnalysisData() {
-        // 各分析データを並行して取得（エラーハンドリング付き）
+        // 統計データを取得
         google.script.run
           .withSuccessHandler(updateResponseRateStats)
           .withFailureHandler(handleError)
           .getResponseRateAnalysis();
         
         google.script.run
-          .withSuccessHandler(updateSubjectAnalysis)
-          .withFailureHandler(handleError)
-          .getSubjectAnalysis();
-        
-        google.script.run
-          .withSuccessHandler(updateEmployeeAnalysis)
-          .withFailureHandler(handleError)
-          .getEmployeeAnalysis();
-        
-        google.script.run
           .withSuccessHandler(updateStudentAnalysis)
           .withFailureHandler(handleError)
           .getStudentAnalysis();
         
+        // ランキングデータを並行取得
         google.script.run
-          .withSuccessHandler(updateTimeAnalysis)
+          .withSuccessHandler(function(data) { 
+            rankingData.clarity = data; 
+            updateRankingChart('clarity', data);
+          })
           .withFailureHandler(handleError)
-          .getTimeAnalysis();
+          .getClarityRanking();
+          
+        google.script.run
+          .withSuccessHandler(function(data) { 
+            rankingData.satisfaction = data; 
+            updateRankingChart('satisfaction', data);
+          })
+          .withFailureHandler(handleError)
+          .getSatisfactionRanking();
+          
+        google.script.run
+          .withSuccessHandler(function(data) { 
+            rankingData.pace = data; 
+            updateRankingChart('pace', data);
+          })
+          .withFailureHandler(handleError)
+          .getPaceRanking();
+          
+        google.script.run
+          .withSuccessHandler(function(data) { 
+            rankingData.fun = data; 
+            updateRankingChart('fun', data);
+          })
+          .withFailureHandler(handleError)
+          .getFunRanking();
       }
 
       function handleError(error) {
@@ -188,144 +253,107 @@
         document.getElementById('responseRate').textContent = data.responseRate + '%';
       }
 
-      function updateSubjectAnalysis(data) {
-        // 統計更新
-        const uniqueSubjects = data.length;
-        
-        // 科目チャート作成
-        const ctx = document.getElementById('subjectChart').getContext('2d');
-        if (subjectChart) subjectChart.destroy();
-        
-        subjectChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: data.slice(0, 10).map(item => item.subject),
-            datasets: [{
-              label: '回答数',
-              data: data.slice(0, 10).map(item => item.responseCount),
-              backgroundColor: 'rgba(45, 135, 255, 0.8)',
-              borderColor: 'rgba(45, 135, 255, 1)',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
-
-        // 詳細テーブル更新
-        updateSubjectTable(data);
-      }
-
-      function updateEmployeeAnalysis(data) {
-        const ctx = document.getElementById('employeeChart').getContext('2d');
-        if (employeeChart) employeeChart.destroy();
-        
-        employeeChart = new Chart(ctx, {
-          type: 'doughnut',
-          data: {
-            labels: data.slice(0, 8).map(item => item.employee),
-            datasets: [{
-              data: data.slice(0, 8).map(item => item.responseCount),
-              backgroundColor: [
-                '#2d87ff', '#ff6b6b', '#4ecdc4', '#45b7d1',
-                '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7'
-              ]
-            }]
-          },
-          options: {
-            responsive: true,
-            plugins: {
-              legend: {
-                position: 'bottom'
-              }
-            }
-          }
-        });
-      }
-
       function updateStudentAnalysis(data) {
         // アクティブ生徒数更新
         document.getElementById('uniqueStudents').textContent = data.length;
-        
-        const ctx = document.getElementById('studentChart').getContext('2d');
-        if (studentChart) studentChart.destroy();
-        
-        studentChart = new Chart(ctx, {
-          type: 'bar',
-          data: {
-            labels: data.slice(0, 10).map(item => item.student),
-            datasets: [{
-              label: '回答数',
-              data: data.slice(0, 10).map(item => item.responseCount),
-              backgroundColor: 'rgba(76, 175, 80, 0.8)',
-              borderColor: 'rgba(76, 175, 80, 1)',
-              borderWidth: 1
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
       }
 
-      function updateTimeAnalysis(data) {
-        const ctx = document.getElementById('timeChart').getContext('2d');
-        if (timeChart) timeChart.destroy();
+      function showRanking(type) {
+        // タブの切り替え
+        document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.ranking-panel').forEach(panel => panel.classList.remove('active'));
         
-        timeChart = new Chart(ctx, {
-          type: 'line',
-          data: {
-            labels: data.map(item => item.month),
-            datasets: [{
-              label: '月別回答数',
-              data: data.map(item => item.count),
-              backgroundColor: 'rgba(255, 107, 107, 0.2)',
-              borderColor: 'rgba(255, 107, 107, 1)',
-              borderWidth: 2,
-              fill: true
-            }]
-          },
-          options: {
-            responsive: true,
-            scales: {
-              y: {
-                beginAtZero: true
-              }
-            }
-          }
-        });
+        event.target.classList.add('active');
+        document.getElementById(type + '-panel').classList.add('active');
+        
+        // チャートの更新（データが既にある場合）
+        if (rankingData[type]) {
+          updateRankingChart(type, rankingData[type]);
+        }
       }
 
-      function updateSubjectTable(data) {
-        const tbody = document.getElementById('subjectTableBody');
+      function updateRankingChart(type, data) {
+        const chartId = type + 'Chart';
+        const ctx = document.getElementById(chartId).getContext('2d');
+        
+        // 既存チャートを削除
+        const chartVar = type + 'Chart';
+        if (window[chartVar]) {
+          window[chartVar].destroy();
+        }
+        
         if (data.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4">データがありません</td></tr>';
+          ctx.font = '16px Arial';
+          ctx.fillStyle = '#666';
+          ctx.textAlign = 'center';
+          ctx.fillText('データがありません', ctx.canvas.width / 2, ctx.canvas.height / 2);
           return;
         }
-
-        let html = '';
-        data.forEach(item => {
-          html += `
-            <tr>
-              <td>${item.subject}</td>
-              <td>${item.responseCount}</td>
-              <td>${item.uniqueEmployees}</td>
-              <td>${item.uniqueStudents}</td>
-            </tr>
-          `;
+        
+        // ランキング順位を追加
+        const chartData = data.map((item, index) => ({
+          ...item,
+          rank: index + 1,
+          label: `${index + 1}位: ${item.teacher} (${item.percentage}%)`
+        }));
+        
+        const colors = [
+          '#FFD700', '#C0C0C0', '#CD7F32', '#4CAF50', '#2196F3',
+          '#FF9800', '#9C27B0', '#607D8B', '#795548', '#E91E63'
+        ];
+        
+        window[chartVar] = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: chartData.map(item => item.label),
+            datasets: [{
+              label: '割合 (%)',
+              data: chartData.map(item => item.percentage),
+              backgroundColor: chartData.map((item, index) => colors[index % colors.length]),
+              borderColor: chartData.map((item, index) => colors[index % colors.length]),
+              borderWidth: 2
+            }]
+          },
+          options: {
+            indexAxis: 'y', // 横棒グラフ
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    const item = chartData[context.dataIndex];
+                    return [
+                      `${item.teacher}: ${item.percentage}%`,
+                      `対象回答: ${item.targetCount}/${item.total}件`
+                    ];
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 100,
+                ticks: {
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              },
+              y: {
+                ticks: {
+                  font: {
+                    size: 12
+                  }
+                }
+              }
+            }
+          }
         });
-        tbody.innerHTML = html;
       }
     </script>
   </body>
