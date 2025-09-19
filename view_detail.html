@@ -245,6 +245,10 @@
         if (!tbody) return;
         var appUrl = "<?= getAppUrl() ?>";
         var empId  = "<?= getSelectedEmpId() ?>";
+        
+        // データを保存（保存ボタンで使用）
+        window.currentTimeClocks = record || [];
+        
         if (!record || !record.length) {
           tbody.innerHTML = '<tr><td colspan="6">データがありません</td></tr>';
           return;
@@ -305,56 +309,61 @@
         }
       }
       
-      // タイムレコーダーデータ保存関数
+      // 保存ボタン - フィードバックのみを保存
       function saveTimeRecorderData() {
         document.getElementById('save_message').textContent = '保存中...';
         
-        // 現在の入力内容を取得してサーバーに送信
-        var form = document.getElementById('workRecordForm');
-        var formData = {
-          target_date: form.target_date.value,
-          target_time: form.target_time.value,
-          registration_type: form.registration_type.value,
-          target_type: form.target_type.value,
-          subject: form.subject.value,
-          student: form.student.value
-        };
+        // フィードバック入力欄を全て取得
+        var feedbackInputs = document.querySelectorAll('input[id^="fb_"]');
+        var saveCount = 0;
+        var totalCount = feedbackInputs.length;
         
-        // 必須項目のチェック
-        if (!formData.target_date) {
-          document.getElementById('save_message').textContent = '対象日付を入力してください';
-          return;
-        }
-        if (!formData.target_time) {
-          document.getElementById('save_message').textContent = '対象時刻を入力してください';
-          return;
-        }
-        if (!formData.target_type) {
-          document.getElementById('save_message').textContent = '打刻種別を選択してください';
-          return;
-        }
-        if (!formData.subject) {
-          document.getElementById('save_message').textContent = '科目を選択してください';
-          return;
-        }
-        if (!formData.student) {
-          document.getElementById('save_message').textContent = '生徒名を入力してください';
+        if (totalCount === 0) {
+          document.getElementById('save_message').textContent = '保存するフィードバックがありません';
           return;
         }
         
-        // 実際にサーバーに保存を行う
+        // 各フィードバック入力欄を個別に保存
+        feedbackInputs.forEach(function(input) {
+          var inputId = input.id;
+          var match = inputId.match(/fb_(\d+)/);
+          if (match && window.currentTimeClocks) {
+            var index = parseInt(match[1]);
+            var rowData = window.currentTimeClocks[index];
+            if (rowData && rowData.row) {
+              google.script.run
+                .withSuccessHandler(function(res){
+                  saveCount++;
+                  if (saveCount === totalCount) {
+                    document.getElementById('save_message').textContent = 'フィードバックを保存しました ✓ (' + totalCount + '件)';
+                    setTimeout(function() {
+                      document.getElementById('save_message').textContent = '';
+                    }, 3000);
+                  }
+                })
+                .withFailureHandler(function(err){
+                  document.getElementById('save_message').textContent = 'フィードバック保存エラー: ' + (err && err.message ? err.message : err);
+                })
+                .saveFeedback(rowData.row, input.value);
+            }
+          }
+        });
+      }
+      
+      // フィードバック保存関数
+      function saveFeedbackRow(row, value){
         google.script.run
-          .withSuccessHandler(function(msg){
-            document.getElementById('save_message').textContent = msg || '保存しました ✓';
-            refreshTimeClocks(); // 一覧を更新
-            setTimeout(function() {
-              document.getElementById('save_message').textContent = '';
-            }, 3000);
+          .withSuccessHandler(function(res){
+            if (res === "OK") {
+              // 成功時は何もしない（無音保存）
+            } else {
+              alert("エラー: " + res);
+            }
           })
           .withFailureHandler(function(err){
-            document.getElementById('save_message').textContent = 'エラー: ' + (err && err.message ? err.message : err);
+            alert("保存エラー: " + (err && err.message ? err.message : err));
           })
-          .saveWorkRecord(formData);
+          .saveFeedback(row, value);
       }
     </script>
   </head>

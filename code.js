@@ -989,18 +989,7 @@ function getAnsweredSessions() {
   return answeredMap;
 }
 
-function saveFeedbackRow(row, inputId){
-  var val = document.getElementById(inputId).value;
-  google.script.run
-    .withSuccessHandler(function(res){
-      if (res === "OK") {
-        alert("保存しました！");
-      } else {
-        alert("エラー: " + res);
-      }
-    })
-    .saveFeedback(row, val);
-}
+
 
 // ========== 授業分析ページ用の関数群 ==========
 
