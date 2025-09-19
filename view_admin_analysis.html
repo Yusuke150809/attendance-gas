@@ -149,12 +149,37 @@
       });
 
       function loadAnalysisData() {
-        // 各分析データを並行して取得
-        google.script.run.withSuccessHandler(updateResponseRateStats).getResponseRateAnalysis();
-        google.script.run.withSuccessHandler(updateSubjectAnalysis).getSubjectAnalysis();
-        google.script.run.withSuccessHandler(updateEmployeeAnalysis).getEmployeeAnalysis();
-        google.script.run.withSuccessHandler(updateStudentAnalysis).getStudentAnalysis();
-        google.script.run.withSuccessHandler(updateTimeAnalysis).getTimeAnalysis();
+        // 各分析データを並行して取得（エラーハンドリング付き）
+        google.script.run
+          .withSuccessHandler(updateResponseRateStats)
+          .withFailureHandler(handleError)
+          .getResponseRateAnalysis();
+        
+        google.script.run
+          .withSuccessHandler(updateSubjectAnalysis)
+          .withFailureHandler(handleError)
+          .getSubjectAnalysis();
+        
+        google.script.run
+          .withSuccessHandler(updateEmployeeAnalysis)
+          .withFailureHandler(handleError)
+          .getEmployeeAnalysis();
+        
+        google.script.run
+          .withSuccessHandler(updateStudentAnalysis)
+          .withFailureHandler(handleError)
+          .getStudentAnalysis();
+        
+        google.script.run
+          .withSuccessHandler(updateTimeAnalysis)
+          .withFailureHandler(handleError)
+          .getTimeAnalysis();
+      }
+
+      function handleError(error) {
+        console.error('データ取得エラー:', error);
+        // エラー時はサンプルデータで表示
+        updateResponseRateStats({ totalResponses: 0, totalSessions: 0, responseRate: 0 });
       }
 
       function updateResponseRateStats(data) {
