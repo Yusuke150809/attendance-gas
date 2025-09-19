@@ -283,6 +283,7 @@
         var typeQuery = document.getElementById('filter_type').value.trim().toLowerCase();
         var dateQuery = document.getElementById('filter_date').value.trim().toLowerCase();
         var subjectQuery = document.getElementById('filter_subject').value.trim().toLowerCase();
+        var studentQuery = document.getElementById('filter_student').value.trim().toLowerCase();
         
         var rows = document.querySelectorAll('tbody tr.wr-row');
         var hit = 0;
@@ -291,11 +292,13 @@
           var type = (tr.getAttribute('data-type') || '').toLowerCase();
           var date = (tr.getAttribute('data-date') || '').toLowerCase();
           var subject = (tr.getAttribute('data-subject') || '').toLowerCase();
+          var student = (tr.getAttribute('data-student') || '').toLowerCase();
           
           var show = true;
           if (typeQuery && type.indexOf(typeQuery) === -1) show = false;
           if (dateQuery && date.indexOf(dateQuery) === -1) show = false;
           if (subjectQuery && subject.indexOf(subjectQuery) === -1) show = false;
+          if (studentQuery && student.indexOf(studentQuery) === -1) show = false;
           
           tr.style.display = show ? '' : 'none';
           if (show) hit++;
@@ -304,7 +307,7 @@
         var counter = document.getElementById('time_filter_count');
         if (counter) {
           var total = rows.length;
-          counter.textContent = (typeQuery || dateQuery || subjectQuery) ? 
+          counter.textContent = (typeQuery || dateQuery || subjectQuery || studentQuery) ? 
             (hit + ' / ' + total + ' 件表示') : (total + ' 件');
         }
       }
@@ -384,6 +387,8 @@
         <input id="filter_date" type="text" placeholder="日時で検索" oninput="applyTimeRecordFilter()" 
                style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
         <input id="filter_subject" type="text" placeholder="科目で検索" oninput="applyTimeRecordFilter()" 
+               style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
+        <input id="filter_student" type="text" placeholder="生徒名で検索" oninput="applyTimeRecordFilter()" 
                style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
         <span id="time_filter_count" style="font-size:12px; opacity:.75;"></span>
       </div>
