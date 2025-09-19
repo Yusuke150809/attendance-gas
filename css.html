@@ -213,23 +213,95 @@
   }
 
   
-  @media (max-width: 600px) {
+  @media (max-width: 768px) {
   body {
-    font-size: 280px; /* 本文ドデカ文字 */
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.5;
+    padding: 10px;
   }
+  
+  /* モバイルでのテーブル表示改善 */
+  table {
+    font-size: 12px;
+    border-collapse: collapse;
+    width: 100%;
+    overflow-x: auto;
+    display: block;
+    white-space: nowrap;
+  }
+  
+  thead, tbody, tr {
+    display: block;
+  }
+  
+  thead tr {
+    position: absolute;
+    top: -9999px;
+    left: -9999px;
+  }
+  
+  tbody tr {
+    border: 1px solid #e5e7eb;
+    margin-bottom: 10px;
+    display: block;
+    border-radius: 8px;
+    background: #fff;
+    padding: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  tbody td {
+    border: none;
+    display: block;
+    text-align: left;
+    padding: 8px 0;
+    position: relative;
+    padding-left: 30%;
+  }
+  
+  tbody td:before {
+    content: attr(data-label);
+    position: absolute;
+    left: 6px;
+    width: 25%;
+    text-align: left;
+    font-weight: bold;
+    color: #2d87ff;
+  }
+  
   .btn,
   input,
   select,
   textarea {
-    font-size: 260px;  /* 入力欄・ボタンスーパーサイズ */
-    padding: 200px;    /* 分厚すぎる余白 */
+    font-size: 16px;
+    padding: 12px 16px;
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
   }
-  table {
-    font-size: 260px;  /* 表の文字も超巨大 */
+  
+  .btn {
+    min-width: auto;
+    width: 100%;
+    margin: 8px 0;
   }
-  th, td {
-    padding: 180px 240px; /* 表のセルも広大に */
+  
+  /* フィルター行をモバイル用に調整 */
+  div[style*="display:flex"] {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+  
+  #studentFilterInput {
+    width: 100% !important;
+  }
+  
+  /* フィードバック入力欄をモバイル用に調整 */
+  input[id^="fb_"] {
+    width: 100% !important;
+    display: block !important;
+    margin: 4px 0 !important;
+    text-align: left !important;
   }
 }
 

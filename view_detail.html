@@ -9,6 +9,7 @@
 <html>
   <head>
     <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
     <script>
       // ページ遷移を抑止
@@ -120,6 +121,68 @@
           .withSuccessHandler(renderTimeClocks)
           .getTimeClocks();
       }
+      
+      // フィードバック一括保存
+      function saveFeedbacks() {
+        var feedbackInputs = document.querySelectorAll('input[id^="fb_"]');
+        var savePromises = [];
+        var saveCount = 0;
+        var errorCount = 0;
+        
+        document.getElementById('feedback_save_message').textContent = '保存中...';
+        
+        feedbackInputs.forEach(function(input) {
+          var row = input.getAttribute('data-row');
+          var value = input.value;
+          if (row && value !== input.getAttribute('data-original-value')) {
+            saveCount++;
+            google.script.run
+              .withSuccessHandler(function(res) {
+                if (res === "OK") {
+                  input.setAttribute('data-original-value', value);
+                  input.style.borderColor = '#22c55e';
+                  setTimeout(function() {
+                    input.style.borderColor = '';
+                  }, 2000);
+                } else {
+                  errorCount++;
+                  input.style.borderColor = '#ef4444';
+                }
+                saveCount--;
+                if (saveCount === 0) {
+                  if (errorCount === 0) {
+                    document.getElementById('feedback_save_message').textContent = '保存完了';
+                  } else {
+                    document.getElementById('feedback_save_message').textContent = '保存中にエラーが発生しました';
+                  }
+                  setTimeout(function() {
+                    document.getElementById('feedback_save_message').textContent = '';
+                  }, 3000);
+                }
+              })
+              .withFailureHandler(function(err) {
+                errorCount++;
+                input.style.borderColor = '#ef4444';
+                saveCount--;
+                if (saveCount === 0) {
+                  document.getElementById('feedback_save_message').textContent = '保存中にエラーが発生しました';
+                  setTimeout(function() {
+                    document.getElementById('feedback_save_message').textContent = '';
+                  }, 3000);
+                }
+              })
+              .saveFeedback(row, value);
+          }
+        });
+        
+        if (saveCount === 0) {
+          document.getElementById('feedback_save_message').textContent = '変更がありません';
+          setTimeout(function() {
+            document.getElementById('feedback_save_message').textContent = '';
+          }, 2000);
+        }
+      }
+      
       function renderTimeClocks(record){
         var tbody = document.querySelector('tbody');
         if (!tbody) return;
@@ -135,18 +198,17 @@
           var url = appUrl + '?empId=' + encodeURIComponent(empId)
                              + '&student=' + encodeURIComponent(r.student || '');
           html += '<tr class="wr-row" data-student="' + (r.student || '') + '">'
-                +   '<td>' + (r.type || '') + '</td>'
-                +   '<td>' + (r.date || '') + '</td>'
-                +   '<td>' + (r.subject || '') + '</td>'
-                +   '<td class="col-workingtime">' + (r.workingtime || '') + '</td>'
-                +   '<td class="col-student">'
+                +   '<td data-label="種別">' + (r.type || '') + '</td>'
+                +   '<td data-label="日時">' + (r.date || '') + '</td>'
+                +   '<td data-label="科目">' + (r.subject || '') + '</td>'
+                +   '<td data-label="総労働" class="col-workingtime">' + (r.workingtime || '') + '</td>'
+                +   '<td data-label="生徒名" class="col-student">'
                 +     (r.student ? ('<a href="' + url + '">' + r.student + '</a>') : '')
                 +   '</td>'
-                +   '<td>'
+                +   '<td data-label="フィードバック">'
                 +     (r.type === "退勤"
-                       ? '<input type="text" id="fb_'+idx+'" value="'+(r.feedback||'')+'" '
-                         + 'style="width:120px;" placeholder="フィードバック" '
-                         + 'oninput="saveFeedbackRow('+r.row+', this.value)">'
+                       ? '<input type="text" id="fb_'+idx+'" data-row="'+r.row+'" data-original-value="'+(r.feedback||'')+'" value="'+(r.feedback||'')+'" '
+                         + 'style="width:100%; max-width:200px;" placeholder="フィードバック入力">'
                        : (r.feedback || ''))
                 +   '</td>'
                 + '</tr>';
@@ -191,21 +253,22 @@
                                  + '&student=' + encodeURIComponent(r.student || '');
          ?>
           <tr class="wr-row" data-student="<?= r.student ?>">
-            <td><?= r.type ?></td>
-            <td><?= r.date ?></td>
-            <td><?= r.subject ?></td>
-            <td><?= r.workingtime ?></td>
-            <td>
+            <td data-label="種別"><?= r.type ?></td>
+            <td data-label="日時"><?= r.date ?></td>
+            <td data-label="科目"><?= r.subject ?></td>
+            <td data-label="総労働"><?= r.workingtime ?></td>
+            <td data-label="生徒名">
               <? if (r.student) { ?>
                 <a href="<?= url ?>"><?= r.student ?></a>
               <? } ?>
             </td>
-            <td>
+            <td data-label="フィードバック">
               <? if (r.type === "退勤") { ?>
-                <input type="text" id="fb_<?= i ?>" value="<?= r.feedback || '' ?>"
-                       style="width:66%; text-align:center; display:block; margin:0 auto;"
-                       placeholder="未回答"
-                       oninput="saveFeedbackRow(<?= r.row ?>, 'fb_<?= i ?>')">
+                <input type="text" id="fb_<?= i ?>" data-row="<?= r.row ?>" 
+                       data-original-value="<?= r.feedback || '' ?>" 
+                       value="<?= r.feedback || '' ?>"
+                       style="width:100%; max-width:200px;"
+                       placeholder="フィードバック入力">
               <? } else { ?>
                 <?= r.feedback || '' ?>
               <? } ?>
@@ -214,6 +277,16 @@
         <? } ?>
         </tbody>
       </table>
+      
+      <!-- フィードバック保存ボタン -->
+      <div style="margin-top: 16px; text-align: center;">
+        <button type="button" class="btn" onclick="saveFeedbacks()" 
+                style="background: #16a34a; min-width: 160px;">
+          フィードバック保存
+        </button>
+        <div id="feedback_save_message" 
+             style="margin-top: 8px; font-weight: bold; color: #16a34a;"></div>
+      </div>
     </div>
 
     <div>
