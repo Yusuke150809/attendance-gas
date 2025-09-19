@@ -207,31 +207,6 @@
           .deleteLastWorkWithPassword(pw);
       }
 
-      // 生徒名フィルタ
-      function filterByStudent(q){
-        var query = (q || '').trim().toLowerCase();
-        var rows  = document.querySelectorAll('tbody tr.wr-row');
-        var hit = 0;
-        rows.forEach(function(tr){
-          var name = (tr.getAttribute('data-student') || '').toLowerCase();
-          var show = !query || name.indexOf(query) >= 0;
-          tr.style.display = show ? '' : 'none';
-          if (show) hit++;
-        });
-        var counter = document.getElementById('filter_count');
-        if (counter){
-          var total = rows.length;
-          counter.textContent = query ? (hit + ' / ' + total + ' 件表示') : (total + ' 件');
-        }
-      }
-      function clearStudentFilter(){
-        var input = document.getElementById('studentFilterInput');
-        if (input){
-          input.value = '';
-          filterByStudent('');
-          input.focus();
-        }
-      }
 
       //従業員名フィルター
       function filterEmployees(q){
@@ -272,7 +247,6 @@
         var empId  = "<?= getSelectedEmpId() ?>";
         if (!record || !record.length) {
           tbody.innerHTML = '<tr><td colspan="6">データがありません</td></tr>';
-          document.getElementById('filter_count').textContent = '0 件';
           return;
         }
         var html = '';
@@ -297,7 +271,6 @@
                 + '</tr>';
         });
         tbody.innerHTML = html;
-        document.getElementById('filter_count').textContent = record.length + ' 件';
         applyTimeRecordFilter(); // フィルタを再適用
       }
 
@@ -347,13 +320,41 @@
           student: form.student.value
         };
         
-        // 簡単な成功メッセージを表示（実際の保存処理は既存のフィードバック保存を流用）
-        setTimeout(function() {
-          document.getElementById('save_message').textContent = '入力内容を保存しました ✓';
-          setTimeout(function() {
-            document.getElementById('save_message').textContent = '';
-          }, 3000);
-        }, 500);
+        // 必須項目のチェック
+        if (!formData.target_date) {
+          document.getElementById('save_message').textContent = '対象日付を入力してください';
+          return;
+        }
+        if (!formData.target_time) {
+          document.getElementById('save_message').textContent = '対象時刻を入力してください';
+          return;
+        }
+        if (!formData.target_type) {
+          document.getElementById('save_message').textContent = '打刻種別を選択してください';
+          return;
+        }
+        if (!formData.subject) {
+          document.getElementById('save_message').textContent = '科目を選択してください';
+          return;
+        }
+        if (!formData.student) {
+          document.getElementById('save_message').textContent = '生徒名を入力してください';
+          return;
+        }
+        
+        // 実際にサーバーに保存を行う
+        google.script.run
+          .withSuccessHandler(function(msg){
+            document.getElementById('save_message').textContent = msg || '保存しました ✓';
+            refreshTimeClocks(); // 一覧を更新
+            setTimeout(function() {
+              document.getElementById('save_message').textContent = '';
+            }, 3000);
+          })
+          .withFailureHandler(function(err){
+            document.getElementById('save_message').textContent = 'エラー: ' + (err && err.message ? err.message : err);
+          })
+          .saveWorkRecord(formData);
       }
     </script>
   </head>
@@ -378,12 +379,7 @@
         <span id="time_filter_count" style="font-size:12px; opacity:.75;"></span>
       </div>
       
-      <div style="margin:8px 0 12px; display:flex; gap:8px; align-items:center;">
-        <input id="studentFilterInput" type="text" placeholder="生徒名で絞り込み"
-               oninput="filterByStudent(this.value)" />
-        <button type="button" class="btn" onclick="clearStudentFilter()">クリア</button>
-        <span id="filter_count" style="font-size:12px; opacity:.75;"></span>
-      </div>
+
       <table border="1">
         <thead>
           <tr>
