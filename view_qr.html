@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+    
+    <style>
+      body {
+        margin: 0;
+        overflow-x: hidden; /* 横スクロール防止 */
+        font-family: sans-serif;
+        padding: 20px;
+      }
+
+      .wrapper {
+        transform: scale(1.5);
+        transform-origin: top center; /* 中央基準 */
+        width: 100%;
+        display: flex;
+        justify-content: center; /* 中央寄せ */
+      }
+
+      h2 { text-align: center; }
+      .frame { max-width: 400px; margin: 0 auto; }
+      select, button, textarea {
+        width: 100%;
+        padding: 10px;
+        margin: 8px 0;
+        font-size: 16px;
+      }
+      button {
+       padding-top: 15px;   /* ← 元の10pxを1.5倍に */
+       padding-bottom: 15px;
+      }
+      textarea {
+        height: 80px;
+        resize: vertical;
+      }
+      .msg { margin-top: 12px; font-weight: bold; text-align: center; }
+
+      
+    </style>
+    <script>
+      // ページ読み込み時に従業員・科目・生徒一覧を取得
+      function loadData() {
+        // 従業員一覧
+        google.script.run.withSuccessHandler(function(list){
+          var sel = document.getElementById("empSelect");
+          sel.innerHTML = "";
+          list.forEach(function(emp){
+            var opt = document.createElement("option");
+            opt.value = emp.id;
+            opt.textContent = emp.name;
+            sel.appendChild(opt);
+          });
+        }).getEmployees();
+
+        // 科目一覧
+        google.script.run.withSuccessHandler(function(subjects){
+          var sel = document.getElementById("subjectSelect");
+          sel.innerHTML = "";
+          subjects.forEach(function(subj){
+            var opt = document.createElement("option");
+            opt.value = subj;
+            opt.textContent = subj;
+            sel.appendChild(opt);
+          });
+        }).getSubjects();
+
+        // 生徒一覧
+        google.script.run.withSuccessHandler(function(students){
+          var sel = document.getElementById("studentSelect");
+          sel.innerHTML = "";
+          students.forEach(function(stu){
+            var opt = document.createElement("option");
+            opt.value = stu;
+            opt.textContent = stu;
+            sel.appendChild(opt);
+          });
+        }).getStudents();
+      }
+
+      // 打刻処理
+      function clock(type) {
+        var empId   = document.getElementById("empSelect").value;
+        var subject = document.getElementById("subjectSelect").value;
+        var student = document.getElementById("studentSelect").value;
+        var feedback = "";
+
+        if (!empId)   { alert("従業員を選択してください"); return; }
+        if (!subject) { alert("科目を選択してください"); return; }
+        if (!student) { alert("生徒名を選択してください"); return; }
+
+        // 退勤時のみフィードバックを取得
+        if (type === 'clock_out') {
+          feedback = document.getElementById("feedbackInput").value;
+        }
+
+        google.script.run.setSelectedEmpId(empId);
+
+        var now = new Date();
+        var form = {
+          target_date: now.toISOString().slice(0,10),
+          target_time: ("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2),
+          target_type: type,
+          subject: subject,
+          student: student,
+          feedback: feedback
+        };
+
+        google.script.run.withSuccessHandler(function(msg){
+          document.getElementById("msg").textContent = msg;
+          if (type === 'clock_out') {
+            document.getElementById("feedbackInput").value = ""; // 入力欄リセット
+          }
+        }).saveWorkRecord(form);
+      }
+
+      window.onload = loadData;
+    </script>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div class="frame">
+        <h2>QR打刻ページ</h2>
+
+        <label>従業員：</label>
+        <select id="empSelect"></select>
+
+        <label>科目：</label>
+        <select id="subjectSelect"></select>
+
+        <label>生徒名：</label>
+        <select id="studentSelect"></select>
+
+        <button onclick="clock('clock_in')">出勤</button>
+        <button onclick="clock('break_begin')">休憩開始</button>
+        <button onclick="clock('break_end')">休憩終了</button>
+        <button onclick="clock('clock_out')">退勤</button>
+
+        <label>フィードバック（退勤時のみ記録されます）：</label>
+        <textarea id="feedbackInput" placeholder="今日の授業のメモなど"></textarea>
+
+        <div id="msg" class="msg"></div>
+        <div class="btn-frame" style="margin-top:16px; text-align:center;">
+          <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
