@@ -864,7 +864,8 @@ function getFormResponseAnalysisData() {
       return [];
     }
 
-    var vals = formSh.getRange(2, 1, last - 1, 6).getValues(); // A～F列
+    // A～J列まで読み取り（アンケート質問も含む）
+    var vals = formSh.getRange(2, 1, last - 1, 10).getValues();
     var data = [];
 
     vals.forEach(function(r, index){
@@ -876,7 +877,11 @@ function getFormResponseAnalysisData() {
           end: r[2] || '',                   // 終了時間
           employee: String(r[3] || '').trim() || "未指定",      // 担当従業員
           subject: String(r[4] || '').trim() || "未指定",       // 科目
-          student: String(r[5] || '').trim()                   // 生徒名
+          student: String(r[5] || '').trim(),                  // 生徒名
+          clarity: String(r[6] || '').trim(),                  // G列: 分かりやすさ
+          satisfaction: String(r[7] || '').trim(),             // H列: 満足度
+          pace: String(r[8] || '').trim(),                     // I列: ペース
+          fun: String(r[9] || '').trim()                       // J列: 楽しさ
         });
       }
     });
@@ -1048,6 +1053,119 @@ function getTimeAnalysis() {
     Logger.log("getTimeAnalysis エラー: " + error.toString());
     return [];
   }
+}
+
+/**
+ * 分かりやすさランキング分析
+ */
+function getClarityRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'clarity', ['分かりやすかった', '普通', '分かりにくかった'], '分かりやすかった');
+  } catch (error) {
+    Logger.log("getClarityRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 満足度ランキング分析
+ */
+function getSatisfactionRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'satisfaction', ['満足した', '普通', '満足しなかった'], '満足した');
+  } catch (error) {
+    Logger.log("getSatisfactionRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * ペースランキング分析
+ */
+function getPaceRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'pace', ['ちょうどよかった', '少しゆっくりだった', '少し速かった'], 'ちょうどよかった');
+  } catch (error) {
+    Logger.log("getPaceRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 楽しさランキング分析
+ */
+function getFunRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'fun', ['楽しかった', '普通', '楽しくなかった'], '楽しかった');
+  } catch (error) {
+    Logger.log("getFunRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 先生別ランキング計算の共通関数
+ */
+function calculateTeacherRanking(data, questionField, options, targetOption) {
+  var teacherStats = {};
+  
+  data.forEach(function(item) {
+    var teacher = item.employee || "未指定";
+    var response = item[questionField] || "";
+    
+    if (!teacherStats[teacher]) {
+      teacherStats[teacher] = {};
+      options.forEach(function(option) {
+        teacherStats[teacher][option] = 0;
+      });
+      teacherStats[teacher].total = 0;
+    }
+    
+    // 回答を分類
+    if (options.indexOf(response) !== -1) {
+      teacherStats[teacher][response]++;
+      teacherStats[teacher].total++;
+    }
+  });
+  
+  var result = [];
+  for (var teacher in teacherStats) {
+    var stats = teacherStats[teacher];
+    if (stats.total > 0) {
+      var targetCount = stats[targetOption] || 0;
+      var percentage = Math.round((targetCount / stats.total) * 100);
+      
+      result.push({
+        teacher: teacher,
+        targetCount: targetCount,
+        total: stats.total,
+        percentage: percentage,
+        breakdown: stats
+      });
+    }
+  }
+  
+  // ターゲット回答の割合でソート（降順）
+  result.sort(function(a, b) { 
+    if (b.percentage === a.percentage) {
+      return b.total - a.total; // 同率の場合は回答数が多い順
+    }
+    return b.percentage - a.percentage; 
+  });
+  
+  return result;
 }
 
 /**
