@@ -843,3 +843,215 @@ function saveFeedbackRow(row, inputId){
     })
     .saveFeedback(row, val);
 }
+
+// ========== 授業分析ページ用の関数群 ==========
+
+/**
+ * フォーム回答データの分析用データを取得
+ */
+function getFormResponseAnalysisData() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var formSh = ss.getSheetByName("フォームの回答 1");
+  if (!formSh) return [];
+  
+  var last = formSh.getLastRow();
+  if (last < 2) return [];
+
+  var vals = formSh.getRange(2, 1, last - 1, 6).getValues(); // A～F列
+  var data = [];
+
+  vals.forEach(function(r, index){
+    if (r[1] && r[5]) { // 開始時間と生徒名がある場合のみ
+      data.push({
+        timestamp: r[0],     // タイムスタンプ
+        start: r[1],         // 授業開始時間
+        end: r[2],           // 終了時間
+        employee: r[3],      // 担当従業員
+        subject: r[4],       // 科目
+        student: r[5]        // 生徒名
+      });
+    }
+  });
+
+  return data;
+}
+
+/**
+ * 科目別分析データ
+ */
+function getSubjectAnalysis() {
+  var data = getFormResponseAnalysisData();
+  var subjectStats = {};
+
+  data.forEach(function(item) {
+    var subject = item.subject || "未指定";
+    if (!subjectStats[subject]) {
+      subjectStats[subject] = {
+        count: 0,
+        students: {},
+        employees: {}
+      };
+    }
+    subjectStats[subject].count++;
+    subjectStats[subject].students[item.student] = true;
+    subjectStats[subject].employees[item.employee] = true;
+  });
+
+  var result = [];
+  for (var subject in subjectStats) {
+    result.push({
+      subject: subject,
+      responseCount: subjectStats[subject].count,
+      uniqueStudents: Object.keys(subjectStats[subject].students).length,
+      uniqueEmployees: Object.keys(subjectStats[subject].employees).length
+    });
+  }
+
+  return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+}
+
+/**
+ * 従業員別分析データ
+ */
+function getEmployeeAnalysis() {
+  var data = getFormResponseAnalysisData();
+  var empStats = {};
+
+  data.forEach(function(item) {
+    var emp = item.employee || "未指定";
+    if (!empStats[emp]) {
+      empStats[emp] = {
+        count: 0,
+        subjects: {},
+        students: {}
+      };
+    }
+    empStats[emp].count++;
+    empStats[emp].subjects[item.subject] = true;
+    empStats[emp].students[item.student] = true;
+  });
+
+  var result = [];
+  for (var emp in empStats) {
+    result.push({
+      employee: emp,
+      responseCount: empStats[emp].count,
+      uniqueSubjects: Object.keys(empStats[emp].subjects).length,
+      uniqueStudents: Object.keys(empStats[emp].students).length
+    });
+  }
+
+  return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+}
+
+/**
+ * 生徒別分析データ
+ */
+function getStudentAnalysis() {
+  var data = getFormResponseAnalysisData();
+  var studentStats = {};
+
+  data.forEach(function(item) {
+    var student = item.student || "未指定";
+    if (!studentStats[student]) {
+      studentStats[student] = {
+        count: 0,
+        subjects: {},
+        employees: {}
+      };
+    }
+    studentStats[student].count++;
+    studentStats[student].subjects[item.subject] = true;
+    studentStats[student].employees[item.employee] = true;
+  });
+
+  var result = [];
+  for (var student in studentStats) {
+    result.push({
+      student: student,
+      responseCount: studentStats[student].count,
+      uniqueSubjects: Object.keys(studentStats[student].subjects).length,
+      uniqueEmployees: Object.keys(studentStats[student].employees).length
+    });
+  }
+
+  return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+}
+
+/**
+ * 時系列分析データ（月別）
+ */
+function getTimeAnalysis() {
+  var data = getFormResponseAnalysisData();
+  var monthStats = {};
+
+  data.forEach(function(item) {
+    if (item.timestamp) {
+      var date = new Date(item.timestamp);
+      var monthKey = Utilities.formatDate(date, "Asia/Tokyo", "yyyy-MM");
+      if (!monthStats[monthKey]) {
+        monthStats[monthKey] = 0;
+      }
+      monthStats[monthKey]++;
+    }
+  });
+
+  var result = [];
+  for (var month in monthStats) {
+    result.push({
+      month: month,
+      count: monthStats[month]
+    });
+  }
+
+  return result.sort(function(a, b) { return a.month.localeCompare(b.month); });
+}
+
+/**
+ * 回答率分析（授業セッション vs フォーム回答）
+ */
+function getResponseRateAnalysis() {
+  // 全ての授業セッションを取得
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
+  var last = sh.getLastRow();
+  if (last < 2) return { totalSessions: 0, totalResponses: 0, responseRate: 0 };
+
+  var vals = sh.getRange(2, 1, last - 1, 7).getValues();
+  var sessions = {};
+  var currentSessions = {};
+
+  // 出勤・退勤ペアを作成
+  vals.forEach(function(r) {
+    var empId = r[0];
+    var type = r[1];
+    var datetime = new Date(r[2]);
+    var subject = r[3];
+    var student = r[5];
+
+    var empStudentKey = empId + "_" + student;
+
+    if (type === '出勤') {
+      currentSessions[empStudentKey] = {
+        start: datetime,
+        subject: subject,
+        student: student,
+        empId: empId
+      };
+    } else if (type === '退勤' && currentSessions[empStudentKey]) {
+      var startStr = Utilities.formatDate(currentSessions[empStudentKey].start, "Asia/Tokyo", "yyyy-MM-dd HH:mm");
+      var sessionKey = startStr + "_" + student;
+      sessions[sessionKey] = true;
+      delete currentSessions[empStudentKey];
+    }
+  });
+
+  var totalSessions = Object.keys(sessions).length;
+  var answeredSessions = getAnsweredSessions();
+  var totalResponses = Object.keys(answeredSessions).length;
+
+  return {
+    totalSessions: totalSessions,
+    totalResponses: totalResponses,
+    responseRate: totalSessions > 0 ? Math.round((totalResponses / totalSessions) * 100) : 0
+  };
+}

@@ -2,18 +2,307 @@
 <html>
   <head>
     <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      .analysis-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+      }
+      .stat-card {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        border: 1px solid #e5e7eb;
+        text-align: center;
+      }
+      .stat-number {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #2d87ff;
+        margin-bottom: 5px;
+      }
+      .stat-label {
+        color: #666;
+        font-size: 0.9rem;
+      }
+      .chart-container {
+        background: #fff;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,.05);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 20px;
+      }
+      .chart-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #333;
+      }
+      .chart-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+      .loading {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+      }
+      @media (max-width: 768px) {
+        .chart-row {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div class="company-title">開発塾 - 授業分析ページ</div>
+    <div class="analysis-container">
+      <div class="company-title">開発塾 - 授業分析ページ</div>
 
-    <p>ここは <b>授業分析ページ </b> です。</p>
-    <p>後で授業データの集計やグラフを入れます。</p>
+      <!-- 統計サマリー -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-number" id="totalResponses">-</div>
+          <div class="stat-label">総フォーム回答数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="totalSessions">-</div>
+          <div class="stat-label">総授業セッション数</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="responseRate">-%</div>
+          <div class="stat-label">回答率</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-number" id="uniqueStudents">-</div>
+          <div class="stat-label">アクティブ生徒数</div>
+        </div>
+      </div>
 
-    <div class="btn-frame" style="margin-top:16px;">
-      <a href="<?= getAppUrl() ?>?page=admin">塾長メニューに戻る</a>
-      <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+      <!-- チャート表示エリア -->
+      <div class="chart-row">
+        <div class="chart-container">
+          <div class="chart-title">科目別回答数</div>
+          <canvas id="subjectChart" width="400" height="300"></canvas>
+        </div>
+        <div class="chart-container">
+          <div class="chart-title">従業員別回答数</div>
+          <canvas id="employeeChart" width="400" height="300"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-row">
+        <div class="chart-container">
+          <div class="chart-title">生徒別回答数</div>
+          <canvas id="studentChart" width="400" height="300"></canvas>
+        </div>
+        <div class="chart-container">
+          <div class="chart-title">月別回答推移</div>
+          <canvas id="timeChart" width="400" height="300"></canvas>
+        </div>
+      </div>
+
+      <!-- 詳細データテーブル -->
+      <div class="chart-container">
+        <div class="chart-title">科目別詳細データ</div>
+        <table id="subjectTable" style="width: 100%;">
+          <thead>
+            <tr>
+              <th>科目</th>
+              <th>回答数</th>
+              <th>担当従業員数</th>
+              <th>受講生徒数</th>
+            </tr>
+          </thead>
+          <tbody id="subjectTableBody">
+            <tr><td colspan="4" class="loading">読み込み中...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="btn-frame" style="margin-top:30px; text-align: center;">
+        <a href="<?= getAppUrl() ?>?page=admin" class="btn">塾長メニューに戻る</a>
+        <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+      </div>
     </div>
+
+    <script>
+      // チャート変数
+      let subjectChart, employeeChart, studentChart, timeChart;
+
+      // ページ読み込み時に分析データを取得
+      window.addEventListener('load', function() {
+        loadAnalysisData();
+      });
+
+      function loadAnalysisData() {
+        // 各分析データを並行して取得
+        google.script.run.withSuccessHandler(updateResponseRateStats).getResponseRateAnalysis();
+        google.script.run.withSuccessHandler(updateSubjectAnalysis).getSubjectAnalysis();
+        google.script.run.withSuccessHandler(updateEmployeeAnalysis).getEmployeeAnalysis();
+        google.script.run.withSuccessHandler(updateStudentAnalysis).getStudentAnalysis();
+        google.script.run.withSuccessHandler(updateTimeAnalysis).getTimeAnalysis();
+      }
+
+      function updateResponseRateStats(data) {
+        document.getElementById('totalResponses').textContent = data.totalResponses;
+        document.getElementById('totalSessions').textContent = data.totalSessions;
+        document.getElementById('responseRate').textContent = data.responseRate + '%';
+      }
+
+      function updateSubjectAnalysis(data) {
+        // 統計更新
+        const uniqueSubjects = data.length;
+        
+        // 科目チャート作成
+        const ctx = document.getElementById('subjectChart').getContext('2d');
+        if (subjectChart) subjectChart.destroy();
+        
+        subjectChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.slice(0, 10).map(item => item.subject),
+            datasets: [{
+              label: '回答数',
+              data: data.slice(0, 10).map(item => item.responseCount),
+              backgroundColor: 'rgba(45, 135, 255, 0.8)',
+              borderColor: 'rgba(45, 135, 255, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+
+        // 詳細テーブル更新
+        updateSubjectTable(data);
+      }
+
+      function updateEmployeeAnalysis(data) {
+        const ctx = document.getElementById('employeeChart').getContext('2d');
+        if (employeeChart) employeeChart.destroy();
+        
+        employeeChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: data.slice(0, 8).map(item => item.employee),
+            datasets: [{
+              data: data.slice(0, 8).map(item => item.responseCount),
+              backgroundColor: [
+                '#2d87ff', '#ff6b6b', '#4ecdc4', '#45b7d1',
+                '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7'
+              ]
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: {
+                position: 'bottom'
+              }
+            }
+          }
+        });
+      }
+
+      function updateStudentAnalysis(data) {
+        // アクティブ生徒数更新
+        document.getElementById('uniqueStudents').textContent = data.length;
+        
+        const ctx = document.getElementById('studentChart').getContext('2d');
+        if (studentChart) studentChart.destroy();
+        
+        studentChart = new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: data.slice(0, 10).map(item => item.student),
+            datasets: [{
+              label: '回答数',
+              data: data.slice(0, 10).map(item => item.responseCount),
+              backgroundColor: 'rgba(76, 175, 80, 0.8)',
+              borderColor: 'rgba(76, 175, 80, 1)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+
+      function updateTimeAnalysis(data) {
+        const ctx = document.getElementById('timeChart').getContext('2d');
+        if (timeChart) timeChart.destroy();
+        
+        timeChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: data.map(item => item.month),
+            datasets: [{
+              label: '月別回答数',
+              data: data.map(item => item.count),
+              backgroundColor: 'rgba(255, 107, 107, 0.2)',
+              borderColor: 'rgba(255, 107, 107, 1)',
+              borderWidth: 2,
+              fill: true
+            }]
+          },
+          options: {
+            responsive: true,
+            scales: {
+              y: {
+                beginAtZero: true
+              }
+            }
+          }
+        });
+      }
+
+      function updateSubjectTable(data) {
+        const tbody = document.getElementById('subjectTableBody');
+        if (data.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4">データがありません</td></tr>';
+          return;
+        }
+
+        let html = '';
+        data.forEach(item => {
+          html += `
+            <tr>
+              <td>${item.subject}</td>
+              <td>${item.responseCount}</td>
+              <td>${item.uniqueEmployees}</td>
+              <td>${item.uniqueStudents}</td>
+            </tr>
+          `;
+        });
+        tbody.innerHTML = html;
+      }
+    </script>
   </body>
 </html>
 
