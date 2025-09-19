@@ -124,34 +124,41 @@
       <!-- ランキング表示エリア -->
       <div class="ranking-container">
         <div class="ranking-tabs">
-          <button class="tab-button active" onclick="showRanking('clarity', event)">分かりやすさ</button>
+          <button class="tab-button active" onclick="showRanking('total', event)">総合ランキング</button>
+          <button class="tab-button" onclick="showRanking('clarity', event)">分かりやすさ</button>
           <button class="tab-button" onclick="showRanking('satisfaction', event)">満足度</button>
           <button class="tab-button" onclick="showRanking('pace', event)">ペース</button>
           <button class="tab-button" onclick="showRanking('fun', event)">楽しさ</button>
         </div>
         
         <div class="ranking-content">
-          <div class="ranking-panel active" id="clarity-panel">
-            <div class="chart-title">分かりやすさランキング</div>
-            <div class="ranking-subtitle">「授業内容や説明は分かりやすかったですか？」の「分かりやすかった」回答割合</div>
+          <div class="ranking-panel active" id="total-panel">
+            <div class="chart-title">総合ポイントランキング</div>
+            <div class="ranking-subtitle">全質問の合計ポイントによる先生ランキング</div>
+            <canvas id="totalChart"></canvas>
+          </div>
+          
+          <div class="ranking-panel" id="clarity-panel">
+            <div class="chart-title">分かりやすさポイントランキング</div>
+            <div class="ranking-subtitle">「授業内容や説明は分かりやすかったですか？」のポイント合計 (わかりやすかった:+2, 普通:+1, わかりにくかった:-1)</div>
             <canvas id="clarityChart"></canvas>
           </div>
           
           <div class="ranking-panel" id="satisfaction-panel">
-            <div class="chart-title">授業満足度ランキング</div>
-            <div class="ranking-subtitle">「今日の授業に満足しましたか？」の「満足した」回答割合</div>
+            <div class="chart-title">授業満足度ポイントランキング</div>
+            <div class="ranking-subtitle">「今日の授業に満足しましたか？」のポイント合計 (満足した:+2, 普通:+1, 満足しなかった:-1)</div>
             <canvas id="satisfactionChart"></canvas>
           </div>
           
           <div class="ranking-panel" id="pace-panel">
-            <div class="chart-title">授業ペースランキング</div>
-            <div class="ranking-subtitle">「授業のペースはどう感じましたか？」の「ちょうどよかった」回答割合</div>
+            <div class="chart-title">授業ペースポイントランキング</div>
+            <div class="ranking-subtitle">「授業のペースはどう感じましたか？」のポイント合計 (ちょうどよかった:+2, 少しゆっくり/早かった:+1)</div>
             <canvas id="paceChart"></canvas>
           </div>
           
           <div class="ranking-panel" id="fun-panel">
-            <div class="chart-title">楽しさランキング</div>
-            <div class="ranking-subtitle">「授業は楽しかったですか？」の「楽しかった」回答割合</div>
+            <div class="chart-title">楽しさポイントランキング</div>
+            <div class="ranking-subtitle">「授業は楽しかったですか？」のポイント合計 (楽しかった:+2, 普通:+1, 楽しくなかった:-1)</div>
             <canvas id="funChart"></canvas>
           </div>
         </div>
@@ -165,7 +172,7 @@
 
     <script>
       // グローバルにチャートインスタンス保持
-      let charts = { clarity: null, satisfaction: null, pace: null, fun: null };
+      let charts = { total: null, clarity: null, satisfaction: null, pace: null, fun: null };
       let rankingData = {};
 
       // ページ読み込み時に分析データを取得
@@ -185,24 +192,29 @@
           .getStudentAnalysis();
         
         google.script.run
-          .withSuccessHandler(function(data) { rankingData.clarity = data; updateRankingChart('clarity', data); })
+          .withSuccessHandler(function(data) { rankingData.total = data; updateRankingChart('total', data); })
           .withFailureHandler(handleError)
-          .getClarityRanking();
+          .getTotalPointRanking();
+        
+        google.script.run
+          .withSuccessHandler(function(data) { rankingData.clarity = data; })
+          .withFailureHandler(handleError)
+          .getClarityPointRanking();
         
         google.script.run
           .withSuccessHandler(function(data) { rankingData.satisfaction = data; })
           .withFailureHandler(handleError)
-          .getSatisfactionRanking();
+          .getSatisfactionPointRanking();
         
         google.script.run
           .withSuccessHandler(function(data) { rankingData.pace = data; })
           .withFailureHandler(handleError)
-          .getPaceRanking();
+          .getPacePointRanking();
         
         google.script.run
           .withSuccessHandler(function(data) { rankingData.fun = data; })
           .withFailureHandler(handleError)
-          .getFunRanking();
+          .getFunPointRanking();
       }
 
       function handleError(error) {
@@ -250,7 +262,7 @@
         const chartData = data.map((item, index) => ({
           ...item,
           rank: index + 1,
-          label: `${index + 1}位: ${item.teacher} (${item.percentage}%)`
+          label: `${index + 1}位: ${item.teacher} (${item.totalPoints}pt)`
         }));
 
         const colors = ['#FFD700','#C0C0C0','#CD7F32','#4CAF50','#2196F3','#FF9800','#9C27B0','#607D8B','#795548','#E91E63'];
@@ -260,8 +272,8 @@
           data: {
             labels: chartData.map(item => item.label),
             datasets: [{
-              label: '割合 (%)',
-              data: chartData.map(item => item.percentage),
+              label: 'ポイント',
+              data: chartData.map(item => item.totalPoints),
               backgroundColor: chartData.map((item, i) => colors[i % colors.length]),
               borderWidth: 2
             }]
@@ -276,10 +288,25 @@
                 callbacks: {
                   label: function(context) {
                     const item = chartData[context.dataIndex];
-                    return [
-                      `${item.teacher}: ${item.percentage}%`,
-                      `対象回答: ${item.targetCount}/${item.total}件`
+                    const tooltipLines = [
+                      `${item.teacher}: ${item.totalPoints}ポイント`,
+                      `回答数: ${item.responseCount}件`
                     ];
+                    
+                    if (item.averagePoints !== undefined) {
+                      tooltipLines.push(`平均: ${item.averagePoints}pt/回答`);
+                    }
+                    
+                    // 総合ランキングの場合は詳細も表示
+                    if (type === 'total' && item.clarityPoints !== undefined) {
+                      tooltipLines.push('---詳細---');
+                      tooltipLines.push(`分かりやすさ: ${item.clarityPoints}pt`);
+                      tooltipLines.push(`満足度: ${item.satisfactionPoints}pt`);
+                      tooltipLines.push(`ペース: ${item.pacePoints}pt`);
+                      tooltipLines.push(`楽しさ: ${item.funPoints}pt`);
+                    }
+                    
+                    return tooltipLines;
                   }
                 }
               }
@@ -287,8 +314,11 @@
             scales: {
               x: {
                 beginAtZero: true,
-                max: 100,
-                ticks: { callback: v => v + '%' }
+                ticks: { 
+                  callback: function(value) {
+                    return value + 'pt';
+                  }
+                }
               }
             }
           }

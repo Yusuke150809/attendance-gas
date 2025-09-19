@@ -1116,7 +1116,185 @@ function getFunRanking() {
 }
 
 /**
- * 先生別ランキング計算の共通関数
+ * 分かりやすさポイントランキング分析
+ */
+function getClarityPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      'わかりやすかった': 2,
+      '普通': 1,
+      'わかりにくかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'clarity', pointRules);
+  } catch (error) {
+    Logger.log("getClarityPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 満足度ポイントランキング分析
+ */
+function getSatisfactionPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      '満足した': 2,
+      '普通': 1,
+      '満足しなかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'satisfaction', pointRules);
+  } catch (error) {
+    Logger.log("getSatisfactionPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * ペースポイントランキング分析
+ */
+function getPacePointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      'ちょうどよかった': 2,
+      '少しゆっくりだった': 1,
+      '少し速かった': 1
+    };
+    
+    return calculateTeacherPointRanking(data, 'pace', pointRules);
+  } catch (error) {
+    Logger.log("getPacePointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 楽しさポイントランキング分析
+ */
+function getFunPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      '楽しかった': 2,
+      '普通': 1,
+      '楽しくなかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'fun', pointRules);
+  } catch (error) {
+    Logger.log("getFunPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 総合ポイントランキング分析（全質問の合計）
+ */
+function getTotalPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var teacherStats = {};
+    
+    // 各質問のポイントルール
+    var clarityPoints = { 'わかりやすかった': 2, '普通': 1, 'わかりにくかった': -1 };
+    var satisfactionPoints = { '満足した': 2, '普通': 1, '満足しなかった': -1 };
+    var pacePoints = { 'ちょうどよかった': 2, '少しゆっくりだった': 1, '少し速かった': 1 };
+    var funPoints = { '楽しかった': 2, '普通': 1, '楽しくなかった': -1 };
+    
+    data.forEach(function(item) {
+      var teacher = item.employee || "未指定";
+      
+      if (!teacherStats[teacher]) {
+        teacherStats[teacher] = {
+          totalPoints: 0,
+          responseCount: 0,
+          clarityPoints: 0,
+          satisfactionPoints: 0,
+          pacePoints: 0,
+          funPoints: 0
+        };
+      }
+      
+      var hasResponse = false;
+      
+      // 各質問のポイントを計算
+      if (clarityPoints.hasOwnProperty(item.clarity)) {
+        teacherStats[teacher].clarityPoints += clarityPoints[item.clarity];
+        teacherStats[teacher].totalPoints += clarityPoints[item.clarity];
+        hasResponse = true;
+      }
+      
+      if (satisfactionPoints.hasOwnProperty(item.satisfaction)) {
+        teacherStats[teacher].satisfactionPoints += satisfactionPoints[item.satisfaction];
+        teacherStats[teacher].totalPoints += satisfactionPoints[item.satisfaction];
+        hasResponse = true;
+      }
+      
+      if (pacePoints.hasOwnProperty(item.pace)) {
+        teacherStats[teacher].pacePoints += pacePoints[item.pace];
+        teacherStats[teacher].totalPoints += pacePoints[item.pace];
+        hasResponse = true;
+      }
+      
+      if (funPoints.hasOwnProperty(item.fun)) {
+        teacherStats[teacher].funPoints += funPoints[item.fun];
+        teacherStats[teacher].totalPoints += funPoints[item.fun];
+        hasResponse = true;
+      }
+      
+      if (hasResponse) {
+        teacherStats[teacher].responseCount++;
+      }
+    });
+    
+    var result = [];
+    for (var teacher in teacherStats) {
+      var stats = teacherStats[teacher];
+      if (stats.responseCount > 0) {
+        result.push({
+          teacher: teacher,
+          totalPoints: stats.totalPoints,
+          responseCount: stats.responseCount,
+          averagePoints: Math.round((stats.totalPoints / stats.responseCount) * 100) / 100,
+          clarityPoints: stats.clarityPoints,
+          satisfactionPoints: stats.satisfactionPoints,
+          pacePoints: stats.pacePoints,
+          funPoints: stats.funPoints
+        });
+      }
+    }
+    
+    // 合計ポイントでソート（降順）
+    result.sort(function(a, b) { 
+      if (b.totalPoints === a.totalPoints) {
+        return b.responseCount - a.responseCount; // 同点の場合は回答数が多い順
+      }
+      return b.totalPoints - a.totalPoints; 
+    });
+    
+    return result;
+  } catch (error) {
+    Logger.log("getTotalPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 先生別ランキング計算の共通関数（従来の割合ベース）
  */
 function calculateTeacherRanking(data, questionField, options, targetOption) {
   var teacherStats = {};
@@ -1163,6 +1341,62 @@ function calculateTeacherRanking(data, questionField, options, targetOption) {
       return b.total - a.total; // 同率の場合は回答数が多い順
     }
     return b.percentage - a.percentage; 
+  });
+  
+  return result;
+}
+
+/**
+ * 先生別ポイントランキング計算の共通関数
+ */
+function calculateTeacherPointRanking(data, questionField, pointRules) {
+  var teacherStats = {};
+  
+  data.forEach(function(item) {
+    var teacher = item.employee || "未指定";
+    var response = item[questionField] || "";
+    
+    if (!teacherStats[teacher]) {
+      teacherStats[teacher] = {
+        totalPoints: 0,
+        responseCount: 0,
+        breakdown: {}
+      };
+      // ポイントルールのキーで初期化
+      for (var option in pointRules) {
+        teacherStats[teacher].breakdown[option] = 0;
+      }
+    }
+    
+    // 回答に対するポイントを加算
+    if (pointRules.hasOwnProperty(response)) {
+      var points = pointRules[response];
+      teacherStats[teacher].totalPoints += points;
+      teacherStats[teacher].responseCount++;
+      teacherStats[teacher].breakdown[response]++;
+    }
+  });
+  
+  var result = [];
+  for (var teacher in teacherStats) {
+    var stats = teacherStats[teacher];
+    if (stats.responseCount > 0) {
+      result.push({
+        teacher: teacher,
+        totalPoints: stats.totalPoints,
+        responseCount: stats.responseCount,
+        averagePoints: Math.round((stats.totalPoints / stats.responseCount) * 100) / 100,
+        breakdown: stats.breakdown
+      });
+    }
+  }
+  
+  // 合計ポイントでソート（降順）
+  result.sort(function(a, b) { 
+    if (b.totalPoints === a.totalPoints) {
+      return b.responseCount - a.responseCount; // 同点の場合は回答数が多い順
+    }
+    return b.totalPoints - a.totalPoints; 
   });
   
   return result;
