@@ -266,8 +266,11 @@ function saveWorkRecord(form) {
   if (!targetTime) {
     throw new Error("対象時刻が入力されていません");
   }
-  if (!registrationType) {
-    throw new Error("登録種別が選択されていません");
+  if (!form.target_type) {
+    throw new Error("打刻種別が選択されていません");
+  }
+  if (!subject) {
+    throw new Error("科目が選択されていません");
   }
   if (!student) {
     throw new Error("生徒名が入力されていません");

@@ -59,7 +59,7 @@
         // 科目一覧
         google.script.run.withSuccessHandler(function(subjects){
           var sel = document.getElementById("subjectSelect");
-          sel.innerHTML = "";
+          sel.innerHTML = '<option value="">選択してください</option>';
           subjects.forEach(function(subj){
             var opt = document.createElement("option");
             opt.value = subj;
@@ -99,11 +99,10 @@
 
         // 必須項目の検証
         if (!empId)   { alert("従業員を選択してください"); return; }
-        if (!registrationType) { alert("登録種別を選択してください"); return; }
         if (!targetDate) { alert("対象日付を入力してください"); return; }
         if (!targetTime) { alert("対象時刻を入力してください"); return; }
-        if (!student) { alert("生徒名を選択してください"); return; }
         if (!subject) { alert("科目を選択してください"); return; }
+        if (!student) { alert("生徒名を選択してください"); return; }
 
         // 退勤時のみフィードバックを取得
         if (type === 'clock_out') {
@@ -139,12 +138,12 @@
       // 必須項目チェック関数
       function checkMandatoryFields() {
         var empId = document.getElementById("empSelect").value;
-        var registrationType = document.getElementById("registrationTypeSelect").value;
         var targetDate = document.getElementById("targetDate").value;
         var targetTime = document.getElementById("targetTime").value;
+        var subject = document.getElementById("subjectSelect").value;
         var student = document.getElementById("studentSelect").value;
         
-        var isValid = empId && registrationType && targetDate && targetTime && student;
+        var isValid = empId && targetDate && targetTime && subject && student;
         
         // 全ボタンの状態を更新
         var buttons = [
@@ -226,6 +225,7 @@
         document.getElementById("registrationTypeSelect").addEventListener('change', checkMandatoryFields);
         document.getElementById("targetDate").addEventListener('change', checkMandatoryFields);
         document.getElementById("targetTime").addEventListener('change', checkMandatoryFields);
+        document.getElementById("subjectSelect").addEventListener('change', checkMandatoryFields);
         document.getElementById("studentSelect").addEventListener('change', checkMandatoryFields);
         
         // 初期状態でボタンを無効化
@@ -241,7 +241,7 @@
         <label>従業員：</label>
         <select id="empSelect"></select>
 
-        <label class="required-label">登録種別（必須）：</label>
+        <label>登録種別：</label>
         <select id="registrationTypeSelect">
           <option value="">選択してください</option>
           <option value="通常">通常</option>
@@ -255,8 +255,10 @@
           <input type="time" id="targetTime" style="flex: 1;">
         </div>
 
-        <label>科目：</label>
-        <select id="subjectSelect"></select>
+        <label class="required-label">科目（必須）：</label>
+        <select id="subjectSelect">
+          <option value="">選択してください</option>
+        </select>
 
         <label class="required-label">生徒名（必須）：</label>
         <select id="studentSelect">
