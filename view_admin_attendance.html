@@ -30,12 +30,21 @@
           var lastActionText = emp.lastAction && emp.lastTime ? 
             '最終動作: ' + emp.lastAction + ' (' + emp.lastTime + ')' : 
             '打刻記録なし';
+          
+          // Safely escape HTML content
+          var empName = String(emp.name || '').replace(/[<>&"]/g, function(m) {
+            return {'<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;'}[m];
+          });
+          var empId = String(emp.id || '').replace(/[<>&"]/g, function(m) {
+            return {'<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;'}[m];
+          });
+          var statusText = String(emp.statusText || '🔴 退勤');
             
           html += '<div class="attendance-card">' +
-                    '<div class="status-badge ' + statusClass + '">' + emp.statusText + '</div>' +
+                    '<div class="status-badge ' + statusClass + '">' + statusText + '</div>' +
                     '<div class="employee-info">' +
-                      '<div class="employee-name">' + emp.name + '</div>' +
-                      '<div class="employee-id">ID: ' + emp.id + '</div>' +
+                      '<div class="employee-name">' + empName + '</div>' +
+                      '<div class="employee-id">ID: ' + empId + '</div>' +
                       '<div class="last-action">' + lastActionText + '</div>' +
                     '</div>' +
                   '</div>';
