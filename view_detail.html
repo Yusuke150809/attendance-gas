@@ -423,7 +423,7 @@
                 <input type="text" id="fb_<?= i ?>" value="<?= r.feedback || '' ?>"
                        style="width:66%; text-align:center; display:block; margin:0 auto;"
                        placeholder="未回答"
-                       oninput="saveFeedbackRow(<?= r.row ?>, 'fb_<?= i ?>')">
+                       oninput="saveFeedbackRow(<?= r.row ?>, this.value)">>
               <? } else { ?>
                 <?= r.feedback || '' ?>
               <? } ?>
