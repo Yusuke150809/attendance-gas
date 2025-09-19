@@ -257,6 +257,21 @@ function saveWorkRecord(form) {
   var subject    = form.subject || "";
   var student    = form.student || "";
   var feedback   = form.feedback || "";
+  var registrationType = form.registration_type || "";
+
+  // 必須項目の検証
+  if (!targetDate) {
+    throw new Error("対象日付が入力されていません");
+  }
+  if (!targetTime) {
+    throw new Error("対象時刻が入力されていません");
+  }
+  if (!registrationType) {
+    throw new Error("登録種別が選択されていません");
+  }
+  if (!student) {
+    throw new Error("生徒名が入力されていません");
+  }
 
   var targetType = '';
   switch (form.target_type) {
@@ -286,6 +301,9 @@ function saveWorkRecord(form) {
   if (targetType === '退勤' && feedback) {
     sh.getRange(r, 7).setValue(feedback); 
   }
+
+  // 登録種別を新しい列に保存（例：8列目）
+  sh.getRange(r, 8).setValue(registrationType);
 
   return targetType + "を記録しました";
 }

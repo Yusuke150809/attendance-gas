@@ -71,7 +71,7 @@
         // 生徒一覧
         google.script.run.withSuccessHandler(function(students){
           var sel = document.getElementById("studentSelect");
-          sel.innerHTML = "";
+          sel.innerHTML = '<option value="">選択してください</option>';
           students.forEach(function(stu){
             var opt = document.createElement("option");
             opt.value = stu;
@@ -90,13 +90,20 @@
         }
         
         var empId   = document.getElementById("empSelect").value;
+        var registrationType = document.getElementById("registrationTypeSelect").value;
+        var targetDate = document.getElementById("targetDate").value;
+        var targetTime = document.getElementById("targetTime").value;
         var subject = document.getElementById("subjectSelect").value;
         var student = document.getElementById("studentSelect").value;
         var feedback = "";
 
+        // 必須項目の検証
         if (!empId)   { alert("従業員を選択してください"); return; }
-        if (!subject) { alert("科目を選択してください"); return; }
+        if (!registrationType) { alert("登録種別を選択してください"); return; }
+        if (!targetDate) { alert("対象日付を入力してください"); return; }
+        if (!targetTime) { alert("対象時刻を入力してください"); return; }
         if (!student) { alert("生徒名を選択してください"); return; }
+        if (!subject) { alert("科目を選択してください"); return; }
 
         // 退勤時のみフィードバックを取得
         if (type === 'clock_out') {
@@ -106,14 +113,14 @@
         isClocking = true;
         google.script.run.setSelectedEmpId(empId);
 
-        var now = new Date();
         var form = {
-          target_date: now.toISOString().slice(0,10),
-          target_time: ("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2),
+          target_date: targetDate,
+          target_time: targetTime,
           target_type: type,
           subject: subject,
           student: student,
-          feedback: feedback
+          feedback: feedback,
+          registration_type: registrationType
         };
 
         google.script.run.withSuccessHandler(function(msg){
@@ -127,6 +134,33 @@
           document.getElementById("msg").textContent = "エラー: " + err;
           isClocking = false;
         }).saveWorkRecord(form);
+      }
+
+      // 必須項目チェック関数
+      function checkMandatoryFields() {
+        var empId = document.getElementById("empSelect").value;
+        var registrationType = document.getElementById("registrationTypeSelect").value;
+        var targetDate = document.getElementById("targetDate").value;
+        var targetTime = document.getElementById("targetTime").value;
+        var student = document.getElementById("studentSelect").value;
+        
+        var isValid = empId && registrationType && targetDate && targetTime && student;
+        
+        // 全ボタンの状態を更新
+        var buttons = [
+          document.querySelector('button[onclick*="clock_in"]'),
+          document.querySelector('button[onclick*="break_begin"]'),
+          document.querySelector('button[onclick*="break_end"]'),
+          document.querySelector('button[onclick*="clock_out"]')
+        ];
+        
+        buttons.forEach(function(btn) {
+          if (btn) {
+            btn.disabled = !isValid;
+          }
+        });
+        
+        return isValid;
       }
 
       // QRページ用ボタン状態制御
@@ -162,6 +196,9 @@
                 break;
             }
             
+            // 必須項目チェック後にボタンの有効/無効を設定
+            checkMandatoryFields();
+            
             // 現在の状態を表示
             document.getElementById("msg").textContent = "現在の状態: " + status.statusText;
           })
@@ -170,12 +207,29 @@
 
       window.onload = function() {
         loadData();
+        
+        // 現在の日時を設定
+        var now = new Date();
+        document.getElementById("targetDate").value = now.toISOString().slice(0,10);
+        document.getElementById("targetTime").value = ("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2);
+        
         // 従業員選択時にボタン状態を更新
         document.getElementById("empSelect").addEventListener('change', function() {
           if (this.value) {
             updateQRButtonStates();
+          } else {
+            checkMandatoryFields();
           }
         });
+        
+        // 必須項目の変更時にボタン状態を更新
+        document.getElementById("registrationTypeSelect").addEventListener('change', checkMandatoryFields);
+        document.getElementById("targetDate").addEventListener('change', checkMandatoryFields);
+        document.getElementById("targetTime").addEventListener('change', checkMandatoryFields);
+        document.getElementById("studentSelect").addEventListener('change', checkMandatoryFields);
+        
+        // 初期状態でボタンを無効化
+        checkMandatoryFields();
       };
     </script>
   </head>
@@ -187,11 +241,27 @@
         <label>従業員：</label>
         <select id="empSelect"></select>
 
+        <label class="required-label">登録種別（必須）：</label>
+        <select id="registrationTypeSelect">
+          <option value="">選択してください</option>
+          <option value="通常">通常</option>
+          <option value="体験">体験</option>
+          <option value="振替">振替</option>
+        </select>
+
+        <label class="required-label">対象日時（必須）：</label>
+        <div style="display: flex; gap: 8px;">
+          <input type="date" id="targetDate" style="flex: 1;">
+          <input type="time" id="targetTime" style="flex: 1;">
+        </div>
+
         <label>科目：</label>
         <select id="subjectSelect"></select>
 
-        <label>生徒名：</label>
-        <select id="studentSelect"></select>
+        <label class="required-label">生徒名（必須）：</label>
+        <select id="studentSelect">
+          <option value="">選択してください</option>
+        </select>
 
         <button onclick="clock('clock_in')">出勤</button>
         <button onclick="clock('break_begin')">休憩開始</button>
