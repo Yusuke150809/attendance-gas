@@ -88,6 +88,7 @@
           +   '<td>' + subj + '</td>'
           +   '<td>'
           +     '<input type="text" class="fb-input" value="'+ fb +'" '
+          +       'data-row="' + sessions[i].row + '" '
           +       'oninput="saveFeedback('+i+', this.value)">'
           +     '<div id="fb_status_'+i+'" class="fb-status"></div>'
           +   '</td>'
@@ -110,6 +111,49 @@
             document.getElementById("fb_status_"+index).textContent = "保存失敗: " + (err && err.message ? err.message : err);
           })
           .saveFeedback(session.row, value);
+      }
+      
+      // ==== 全フィードバック保存 ====
+      function saveAllFeedback(){
+        document.getElementById("feedback_save_message").textContent = "フィードバック保存中...";
+        
+        var inputs = document.querySelectorAll('.fb-input');
+        var saveCount = 0;
+        var totalCount = inputs.length;
+        
+        if (totalCount === 0) {
+          document.getElementById("feedback_save_message").textContent = "保存するデータがありません";
+          return;
+        }
+        
+        inputs.forEach(function(input) {
+          var row = input.getAttribute('data-row');
+          if (row) {
+            google.script.run
+              .withSuccessHandler(function(msg){
+                saveCount++;
+                if (saveCount === totalCount) {
+                  document.getElementById("feedback_save_message").textContent = "フィードバック列を保存しました ✓ (" + totalCount + "件)";
+                  setTimeout(function() {
+                    document.getElementById("feedback_save_message").textContent = "";
+                  }, 3000);
+                }
+              })
+              .withFailureHandler(function(err){
+                document.getElementById("feedback_save_message").textContent = "保存エラー: " + (err && err.message ? err.message : err);
+              })
+              .saveFeedback(parseInt(row), input.value);
+          } else {
+            // データ行が見つからない場合はカウントを増やして次へ
+            saveCount++;
+            if (saveCount === totalCount) {
+              document.getElementById("feedback_save_message").textContent = "フィードバック列を保存しました ✓ (" + totalCount + "件)";
+              setTimeout(function() {
+                document.getElementById("feedback_save_message").textContent = "";
+              }, 3000);
+            }
+          }
+        });
       }
     </script>
   </head>
@@ -144,6 +188,12 @@
         <tr><td colspan="6">読み込み中…</td></tr>
       </tbody>
     </table>
+
+    <!-- 保存ボタン -->
+    <div class="btn-frame" style="margin-top: 16px; text-align: center;">
+      <button type="button" class="btn" onclick="saveAllFeedback()">フィードバック保存</button>
+      <div id="feedback_save_message" style="margin-top: 8px; font-weight: bold;"></div>
+    </div>
 
     <div class="btn-frame" style="margin-top:16px;">
       <a href="<?= getAppUrl() ?>">ホームへ戻る</a>

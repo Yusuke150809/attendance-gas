@@ -257,6 +257,24 @@ function saveWorkRecord(form) {
   var subject    = form.subject || "";
   var student    = form.student || "";
   var feedback   = form.feedback || "";
+  var registrationType = form.registration_type || "";
+
+  // 必須項目の検証
+  if (!targetDate) {
+    throw new Error("対象日付が入力されていません");
+  }
+  if (!targetTime) {
+    throw new Error("対象時刻が入力されていません");
+  }
+  if (!form.target_type) {
+    throw new Error("打刻種別が選択されていません");
+  }
+  if (!subject) {
+    throw new Error("科目が選択されていません");
+  }
+  if (!student) {
+    throw new Error("生徒名が入力されていません");
+  }
 
   var targetType = '';
   switch (form.target_type) {
@@ -286,6 +304,9 @@ function saveWorkRecord(form) {
   if (targetType === '退勤' && feedback) {
     sh.getRange(r, 7).setValue(feedback); 
   }
+
+  // 登録種別を新しい列に保存（例：8列目）
+  sh.getRange(r, 8).setValue(registrationType);
 
   return targetType + "を記録しました";
 }
@@ -743,6 +764,143 @@ function getSubjects() {
   list.sort();
   return list;
 }
+
+/**
+ * 全従業員の現在の勤務状況を取得
+ */
+/**
+ * 指定した従業員の現在の勤怠状況を取得
+ */
+function getCurrentEmployeeStatus(empId) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
+  var lastRow = sh.getLastRow();
+  
+  if (lastRow < 2) {
+    return {
+      status: 'off_duty',
+      statusText: '🔴 退勤',
+      lastAction: null,
+      lastTime: null
+    };
+  }
+
+  var latestRecord = null;
+  
+  // 打刻履歴を逆順で検索して最新レコードを見つける
+  for (var row = lastRow; row >= 2; row--) {
+    var empIdCell = sh.getRange(row, 1).getValue();
+    if (String(empIdCell) === String(empId)) {
+      latestRecord = {
+        type: sh.getRange(row, 2).getValue(),
+        datetime: sh.getRange(row, 3).getValue()
+      };
+      break;
+    }
+  }
+  
+  var status = 'off_duty';
+  var statusText = '🔴 退勤';
+  
+  if (latestRecord) {
+    switch (latestRecord.type) {
+      case '出勤':
+      case '休憩終了':
+        status = 'working';
+        statusText = '🟢 勤務中';
+        break;
+      case '休憩開始':
+        status = 'break';
+        statusText = '☕ 休憩';
+        break;
+      case '退勤':
+      default:
+        status = 'off_duty';
+        statusText = '🔴 退勤';
+        break;
+    }
+  }
+  
+  return {
+    status: status,
+    statusText: statusText,
+    lastAction: latestRecord ? latestRecord.type : null,
+    lastTime: latestRecord ? formatDateTime(latestRecord.datetime) : null
+  };
+}
+
+function getAllEmployeesAttendanceStatus() {
+  var employees = getEmployees();
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
+  var lastRow = sh.getLastRow();
+  
+  if (lastRow < 2) {
+    // データがない場合、全員退勤状態
+    return employees.map(function(emp) {
+      return {
+        id: emp.id,
+        name: emp.name,
+        status: 'off_duty',
+        statusText: '🔴 退勤',
+        lastAction: null,
+        lastTime: null
+      };
+    });
+  }
+
+  var result = [];
+  
+  // 各従業員の最新の勤怠状況を取得
+  employees.forEach(function(emp) {
+    var empId = emp.id;
+    var latestRecord = null;
+    
+    // 打刻履歴を逆順で検索して最新レコードを見つける
+    for (var row = lastRow; row >= 2; row--) {
+      var empIdCell = sh.getRange(row, 1).getValue();
+      if (String(empIdCell) === String(empId)) {
+        latestRecord = {
+          type: sh.getRange(row, 2).getValue(),
+          datetime: sh.getRange(row, 3).getValue()
+        };
+        break;
+      }
+    }
+    
+    var status = 'off_duty';
+    var statusText = '🔴 退勤';
+    
+    if (latestRecord) {
+      switch (latestRecord.type) {
+        case '出勤':
+        case '休憩終了':
+          status = 'working';
+          statusText = '🟢 勤務中';
+          break;
+        case '休憩開始':
+          status = 'break';
+          statusText = '☕ 休憩';
+          break;
+        case '退勤':
+        default:
+          status = 'off_duty';
+          statusText = '🔴 退勤';
+          break;
+      }
+    }
+    
+    result.push({
+      id: emp.id,
+      name: emp.name,
+      status: status,
+      statusText: statusText,
+      lastAction: latestRecord ? latestRecord.type : null,
+      lastTime: latestRecord ? formatDateTime(latestRecord.datetime) : null
+    });
+  });
+  
+  return result;
+}
+
 function getLessonSessions() {
   var empId   = getSelectedEmpId();
   var student = getSelectedStudent();
@@ -831,15 +989,618 @@ function getAnsweredSessions() {
   return answeredMap;
 }
 
-function saveFeedbackRow(row, inputId){
-  var val = document.getElementById(inputId).value;
-  google.script.run
-    .withSuccessHandler(function(res){
-      if (res === "OK") {
-        alert("保存しました！");
-      } else {
-        alert("エラー: " + res);
+
+
+// ========== 授業分析ページ用の関数群 ==========
+
+/**
+ * フォーム回答データの分析用データを取得
+ */
+function getFormResponseAnalysisData() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var formSh = ss.getSheetByName("フォームの回答 1");
+    if (!formSh) {
+      Logger.log("フォーム回答シートが見つかりません");
+      return [];
+    }
+    
+    var last = formSh.getLastRow();
+    if (last < 2) {
+      Logger.log("フォーム回答データがありません");
+      return [];
+    }
+
+    // A～J列まで読み取り（アンケート質問も含む）
+    var vals = formSh.getRange(2, 1, last - 1, 10).getValues();
+    var data = [];
+
+    vals.forEach(function(r, index){
+      // 必須項目をチェック
+      if (r[1] && r[5]) { // 開始時間と生徒名がある場合のみ
+        data.push({
+          timestamp: r[0] || new Date(),     // タイムスタンプ
+          start: r[1],                       // 授業開始時間
+          end: r[2] || '',                   // 終了時間
+          employee: String(r[3] || '').trim() || "未指定",      // 担当従業員
+          subject: String(r[4] || '').trim() || "未指定",       // 科目
+          student: String(r[5] || '').trim(),                  // 生徒名
+          clarity: String(r[6] || '').trim(),                  // G列: 分かりやすさ
+          satisfaction: String(r[7] || '').trim(),             // H列: 満足度
+          pace: String(r[8] || '').trim(),                     // I列: ペース
+          fun: String(r[9] || '').trim()                       // J列: 楽しさ
+        });
       }
-    })
-    .saveFeedback(row, val);
+    });
+
+    Logger.log("分析データ件数: " + data.length);
+    return data;
+  } catch (error) {
+    Logger.log("getFormResponseAnalysisData エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 科目別分析データ
+ */
+function getSubjectAnalysis() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var subjectStats = {};
+
+    data.forEach(function(item) {
+      var subject = item.subject || "未指定";
+      if (!subjectStats[subject]) {
+        subjectStats[subject] = {
+          count: 0,
+          students: {},
+          employees: {}
+        };
+      }
+      subjectStats[subject].count++;
+      subjectStats[subject].students[item.student] = true;
+      subjectStats[subject].employees[item.employee] = true;
+    });
+
+    var result = [];
+    for (var subject in subjectStats) {
+      result.push({
+        subject: subject,
+        responseCount: subjectStats[subject].count,
+        uniqueStudents: Object.keys(subjectStats[subject].students).length,
+        uniqueEmployees: Object.keys(subjectStats[subject].employees).length
+      });
+    }
+
+    return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+  } catch (error) {
+    Logger.log("getSubjectAnalysis エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 従業員別分析データ
+ */
+function getEmployeeAnalysis() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var empStats = {};
+
+    data.forEach(function(item) {
+      var emp = item.employee || "未指定";
+      if (!empStats[emp]) {
+        empStats[emp] = {
+          count: 0,
+          subjects: {},
+          students: {}
+        };
+      }
+      empStats[emp].count++;
+      empStats[emp].subjects[item.subject] = true;
+      empStats[emp].students[item.student] = true;
+    });
+
+    var result = [];
+    for (var emp in empStats) {
+      result.push({
+        employee: emp,
+        responseCount: empStats[emp].count,
+        uniqueSubjects: Object.keys(empStats[emp].subjects).length,
+        uniqueStudents: Object.keys(empStats[emp].students).length
+      });
+    }
+
+    return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+  } catch (error) {
+    Logger.log("getEmployeeAnalysis エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 生徒別分析データ
+ */
+function getStudentAnalysis() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var studentStats = {};
+
+    data.forEach(function(item) {
+      var student = item.student || "未指定";
+      if (!studentStats[student]) {
+        studentStats[student] = {
+          count: 0,
+          subjects: {},
+          employees: {}
+        };
+      }
+      studentStats[student].count++;
+      studentStats[student].subjects[item.subject] = true;
+      studentStats[student].employees[item.employee] = true;
+    });
+
+    var result = [];
+    for (var student in studentStats) {
+      result.push({
+        student: student,
+        responseCount: studentStats[student].count,
+        uniqueSubjects: Object.keys(studentStats[student].subjects).length,
+        uniqueEmployees: Object.keys(studentStats[student].employees).length
+      });
+    }
+
+    return result.sort(function(a, b) { return b.responseCount - a.responseCount; });
+  } catch (error) {
+    Logger.log("getStudentAnalysis エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 時系列分析データ（月別）
+ */
+function getTimeAnalysis() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var monthStats = {};
+
+    data.forEach(function(item) {
+      if (item.timestamp) {
+        var date = new Date(item.timestamp);
+        if (!isNaN(date.getTime())) {
+          var monthKey = Utilities.formatDate(date, "Asia/Tokyo", "yyyy-MM");
+          if (!monthStats[monthKey]) {
+            monthStats[monthKey] = 0;
+          }
+          monthStats[monthKey]++;
+        }
+      }
+    });
+
+    var result = [];
+    for (var month in monthStats) {
+      result.push({
+        month: month,
+        count: monthStats[month]
+      });
+    }
+
+    return result.sort(function(a, b) { return a.month.localeCompare(b.month); });
+  } catch (error) {
+    Logger.log("getTimeAnalysis エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 分かりやすさランキング分析
+ */
+function getClarityRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'clarity', ['分かりやすかった', '普通', '分かりにくかった'], '分かりやすかった');
+  } catch (error) {
+    Logger.log("getClarityRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 満足度ランキング分析
+ */
+function getSatisfactionRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'satisfaction', ['満足した', '普通', '満足しなかった'], '満足した');
+  } catch (error) {
+    Logger.log("getSatisfactionRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * ペースランキング分析
+ */
+function getPaceRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'pace', ['ちょうどよかった', '少しゆっくりだった', '少し速かった'], 'ちょうどよかった');
+  } catch (error) {
+    Logger.log("getPaceRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 楽しさランキング分析
+ */
+function getFunRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    return calculateTeacherRanking(data, 'fun', ['楽しかった', '普通', '楽しくなかった'], '楽しかった');
+  } catch (error) {
+    Logger.log("getFunRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 分かりやすさポイントランキング分析
+ */
+function getClarityPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      'わかりやすかった': 2,
+      '普通': 1,
+      'わかりにくかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'clarity', pointRules);
+  } catch (error) {
+    Logger.log("getClarityPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 満足度ポイントランキング分析
+ */
+function getSatisfactionPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      '満足した': 2,
+      '普通': 1,
+      '満足しなかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'satisfaction', pointRules);
+  } catch (error) {
+    Logger.log("getSatisfactionPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * ペースポイントランキング分析
+ */
+function getPacePointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      'ちょうどよかった': 2,
+      '少しゆっくりだった': 1,
+      '少し速かった': 1
+    };
+    
+    return calculateTeacherPointRanking(data, 'pace', pointRules);
+  } catch (error) {
+    Logger.log("getPacePointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 楽しさポイントランキング分析
+ */
+function getFunPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var pointRules = {
+      '楽しかった': 2,
+      '普通': 1,
+      '楽しくなかった': -1
+    };
+    
+    return calculateTeacherPointRanking(data, 'fun', pointRules);
+  } catch (error) {
+    Logger.log("getFunPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 総合ポイントランキング分析（全質問の合計）
+ */
+function getTotalPointRanking() {
+  try {
+    var data = getFormResponseAnalysisData();
+    if (data.length === 0) return [];
+    
+    var teacherStats = {};
+    
+    // 各質問のポイントルール
+    var clarityPoints = { 'わかりやすかった': 2, '普通': 1, 'わかりにくかった': -1 };
+    var satisfactionPoints = { '満足した': 2, '普通': 1, '満足しなかった': -1 };
+    var pacePoints = { 'ちょうどよかった': 2, '少しゆっくりだった': 1, '少し速かった': 1 };
+    var funPoints = { '楽しかった': 2, '普通': 1, '楽しくなかった': -1 };
+    
+    data.forEach(function(item) {
+      var teacher = item.employee || "未指定";
+      
+      if (!teacherStats[teacher]) {
+        teacherStats[teacher] = {
+          totalPoints: 0,
+          responseCount: 0,
+          clarityPoints: 0,
+          satisfactionPoints: 0,
+          pacePoints: 0,
+          funPoints: 0
+        };
+      }
+      
+      var hasResponse = false;
+      
+      // 各質問のポイントを計算
+      if (clarityPoints.hasOwnProperty(item.clarity)) {
+        teacherStats[teacher].clarityPoints += clarityPoints[item.clarity];
+        teacherStats[teacher].totalPoints += clarityPoints[item.clarity];
+        hasResponse = true;
+      }
+      
+      if (satisfactionPoints.hasOwnProperty(item.satisfaction)) {
+        teacherStats[teacher].satisfactionPoints += satisfactionPoints[item.satisfaction];
+        teacherStats[teacher].totalPoints += satisfactionPoints[item.satisfaction];
+        hasResponse = true;
+      }
+      
+      if (pacePoints.hasOwnProperty(item.pace)) {
+        teacherStats[teacher].pacePoints += pacePoints[item.pace];
+        teacherStats[teacher].totalPoints += pacePoints[item.pace];
+        hasResponse = true;
+      }
+      
+      if (funPoints.hasOwnProperty(item.fun)) {
+        teacherStats[teacher].funPoints += funPoints[item.fun];
+        teacherStats[teacher].totalPoints += funPoints[item.fun];
+        hasResponse = true;
+      }
+      
+      if (hasResponse) {
+        teacherStats[teacher].responseCount++;
+      }
+    });
+    
+    var result = [];
+    for (var teacher in teacherStats) {
+      var stats = teacherStats[teacher];
+      if (stats.responseCount > 0) {
+        result.push({
+          teacher: teacher,
+          totalPoints: stats.totalPoints,
+          responseCount: stats.responseCount,
+          averagePoints: Math.round((stats.totalPoints / stats.responseCount) * 100) / 100,
+          clarityPoints: stats.clarityPoints,
+          satisfactionPoints: stats.satisfactionPoints,
+          pacePoints: stats.pacePoints,
+          funPoints: stats.funPoints
+        });
+      }
+    }
+    
+    // 合計ポイントでソート（降順）
+    result.sort(function(a, b) { 
+      if (b.totalPoints === a.totalPoints) {
+        return b.responseCount - a.responseCount; // 同点の場合は回答数が多い順
+      }
+      return b.totalPoints - a.totalPoints; 
+    });
+    
+    return result;
+  } catch (error) {
+    Logger.log("getTotalPointRanking エラー: " + error.toString());
+    return [];
+  }
+}
+
+/**
+ * 先生別ランキング計算の共通関数（従来の割合ベース）
+ */
+function calculateTeacherRanking(data, questionField, options, targetOption) {
+  var teacherStats = {};
+  
+  data.forEach(function(item) {
+    var teacher = item.employee || "未指定";
+    var response = item[questionField] || "";
+    
+    if (!teacherStats[teacher]) {
+      teacherStats[teacher] = {};
+      options.forEach(function(option) {
+        teacherStats[teacher][option] = 0;
+      });
+      teacherStats[teacher].total = 0;
+    }
+    
+    // 回答を分類
+    if (options.indexOf(response) !== -1) {
+      teacherStats[teacher][response]++;
+      teacherStats[teacher].total++;
+    }
+  });
+  
+  var result = [];
+  for (var teacher in teacherStats) {
+    var stats = teacherStats[teacher];
+    if (stats.total > 0) {
+      var targetCount = stats[targetOption] || 0;
+      var percentage = Math.round((targetCount / stats.total) * 100);
+      
+      result.push({
+        teacher: teacher,
+        targetCount: targetCount,
+        total: stats.total,
+        percentage: percentage,
+        breakdown: stats
+      });
+    }
+  }
+  
+  // ターゲット回答の割合でソート（降順）
+  result.sort(function(a, b) { 
+    if (b.percentage === a.percentage) {
+      return b.total - a.total; // 同率の場合は回答数が多い順
+    }
+    return b.percentage - a.percentage; 
+  });
+  
+  return result;
+}
+
+/**
+ * 先生別ポイントランキング計算の共通関数
+ */
+function calculateTeacherPointRanking(data, questionField, pointRules) {
+  var teacherStats = {};
+  
+  data.forEach(function(item) {
+    var teacher = item.employee || "未指定";
+    var response = item[questionField] || "";
+    
+    if (!teacherStats[teacher]) {
+      teacherStats[teacher] = {
+        totalPoints: 0,
+        responseCount: 0,
+        breakdown: {}
+      };
+      // ポイントルールのキーで初期化
+      for (var option in pointRules) {
+        teacherStats[teacher].breakdown[option] = 0;
+      }
+    }
+    
+    // 回答に対するポイントを加算
+    if (pointRules.hasOwnProperty(response)) {
+      var points = pointRules[response];
+      teacherStats[teacher].totalPoints += points;
+      teacherStats[teacher].responseCount++;
+      teacherStats[teacher].breakdown[response]++;
+    }
+  });
+  
+  var result = [];
+  for (var teacher in teacherStats) {
+    var stats = teacherStats[teacher];
+    if (stats.responseCount > 0) {
+      result.push({
+        teacher: teacher,
+        totalPoints: stats.totalPoints,
+        responseCount: stats.responseCount,
+        averagePoints: Math.round((stats.totalPoints / stats.responseCount) * 100) / 100,
+        breakdown: stats.breakdown
+      });
+    }
+  }
+  
+  // 合計ポイントでソート（降順）
+  result.sort(function(a, b) { 
+    if (b.totalPoints === a.totalPoints) {
+      return b.responseCount - a.responseCount; // 同点の場合は回答数が多い順
+    }
+    return b.totalPoints - a.totalPoints; 
+  });
+  
+  return result;
+}
+
+/**
+ * 回答率分析（授業セッション vs フォーム回答）
+ */
+function getResponseRateAnalysis() {
+  try {
+    // 全ての授業セッションを取得
+    var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
+    var last = sh.getLastRow();
+    if (last < 2) return { totalSessions: 0, totalResponses: 0, responseRate: 0 };
+
+    var vals = sh.getRange(2, 1, last - 1, 7).getValues();
+    var sessions = {};
+    var currentSessions = {};
+
+    // 出勤・退勤ペアを作成
+    vals.forEach(function(r) {
+      var empId = r[0];
+      var type = r[1];
+      var datetime = new Date(r[2]);
+      var subject = r[3];
+      var student = r[5];
+
+      if (!empId || !student) return; // 必須項目チェック
+
+      var empStudentKey = empId + "_" + student;
+
+      if (type === '出勤') {
+        currentSessions[empStudentKey] = {
+          start: datetime,
+          subject: subject,
+          student: student,
+          empId: empId
+        };
+      } else if (type === '退勤' && currentSessions[empStudentKey]) {
+        var startStr = Utilities.formatDate(currentSessions[empStudentKey].start, "Asia/Tokyo", "yyyy-MM-dd HH:mm");
+        var sessionKey = startStr + "_" + student;
+        sessions[sessionKey] = true;
+        delete currentSessions[empStudentKey];
+      }
+    });
+
+    var totalSessions = Object.keys(sessions).length;
+    var answeredSessions = getAnsweredSessions();
+    var totalResponses = Object.keys(answeredSessions).length;
+
+    return {
+      totalSessions: totalSessions,
+      totalResponses: totalResponses,
+      responseRate: totalSessions > 0 ? Math.round((totalResponses / totalSessions) * 100) : 0
+    };
+  } catch (error) {
+    Logger.log("getResponseRateAnalysis エラー: " + error.toString());
+    return { totalSessions: 0, totalResponses: 0, responseRate: 0 };
+  }
 }
