@@ -747,6 +747,66 @@ function getSubjects() {
 /**
  * 全従業員の現在の勤務状況を取得
  */
+/**
+ * 指定した従業員の現在の勤怠状況を取得
+ */
+function getCurrentEmployeeStatus(empId) {
+  var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
+  var lastRow = sh.getLastRow();
+  
+  if (lastRow < 2) {
+    return {
+      status: 'off_duty',
+      statusText: '🔴 退勤',
+      lastAction: null,
+      lastTime: null
+    };
+  }
+
+  var latestRecord = null;
+  
+  // 打刻履歴を逆順で検索して最新レコードを見つける
+  for (var row = lastRow; row >= 2; row--) {
+    var empIdCell = sh.getRange(row, 1).getValue();
+    if (String(empIdCell) === String(empId)) {
+      latestRecord = {
+        type: sh.getRange(row, 2).getValue(),
+        datetime: sh.getRange(row, 3).getValue()
+      };
+      break;
+    }
+  }
+  
+  var status = 'off_duty';
+  var statusText = '🔴 退勤';
+  
+  if (latestRecord) {
+    switch (latestRecord.type) {
+      case '出勤':
+      case '休憩終了':
+        status = 'working';
+        statusText = '🟢 勤務中';
+        break;
+      case '休憩開始':
+        status = 'break';
+        statusText = '☕ 休憩';
+        break;
+      case '退勤':
+      default:
+        status = 'off_duty';
+        statusText = '🔴 退勤';
+        break;
+    }
+  }
+  
+  return {
+    status: status,
+    statusText: statusText,
+    lastAction: latestRecord ? latestRecord.type : null,
+    lastTime: latestRecord ? formatDateTime(latestRecord.datetime) : null
+  };
+}
+
 function getAllEmployeesAttendanceStatus() {
   var employees = getEmployees();
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴

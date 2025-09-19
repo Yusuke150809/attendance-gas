@@ -15,6 +15,7 @@
   th, td {
     padding:8px 12px;
     border-bottom:1px solid #e5e7eb;
+    text-align: center; /* 全セルを中央揃え */
   }
   thead th {
     background:#2d87ff;  
@@ -206,32 +207,91 @@
     width: 5.5ch;        
     max-width: 5.5ch;
     white-space: nowrap;
-    text-align: left;
+    text-align: center; /* 中央揃えに変更 */
   } 
   input[name="student"] {
     width: 5.5ch;
   }
 
-  
-  @media (max-width: 600px) {
-  body {
-    font-size: 280px; /* 本文ドデカ文字 */
-    line-height: 1.6;
+  /* フィルターバー */
+  .filter-bar { 
+    margin:12px 0; 
+    display:flex; 
+    gap:8px; 
+    flex-wrap:wrap; 
   }
-  .btn,
-  input,
-  select,
-  textarea {
-    font-size: 260px;  /* 入力欄・ボタンスーパーサイズ */
-    padding: 200px;    /* 分厚すぎる余白 */
+  .filter-bar input, .filter-bar select {
+    padding:4px 6px; 
+    border:1px solid #ccc; 
+    border-radius:4px;
   }
-  table {
-    font-size: 260px;  /* 表の文字も超巨大 */
+
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    body {
+      font-size: 14px;
+      line-height: 1.4;
+      padding: 10px;
+    }
+    
+    table {
+      margin: 0 8px; /* 左右に余白を追加 */
+      font-size: 12px;
+    }
+    
+    th, td {
+      padding: 6px 4px;
+      font-size: 12px;
+    }
+    
+    .btn,
+    input,
+    select,
+    textarea {
+      font-size: 14px;
+      padding: 8px;
+    }
+    
+    .filter-bar {
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .filter-bar input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .col-student {
+      min-width: 60px;
+    }
+    
+    .col-workingtime {
+      min-width: 80px;
+    }
+    
+    .col-feedback {
+      min-width: 100px;
+    }
   }
-  th, td {
-    padding: 180px 240px; /* 表のセルも広大に */
+
+  @media (max-width: 480px) {
+    table {
+      margin: 0 4px; /* さらに狭い画面では余白を小さく */
+      font-size: 11px;
+    }
+    
+    th, td {
+      padding: 4px 2px;
+      font-size: 11px;
+    }
+    
+    .btn {
+      padding: 6px 12px;
+      font-size: 12px;
+      min-width: 80px;
+    }
   }
-}
 
 
 
