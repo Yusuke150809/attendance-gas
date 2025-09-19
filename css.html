@@ -49,6 +49,24 @@
   }
   a:hover { text-decoration:underline; }
 
+  /* 必須項目のラベルスタイル */
+  .required-label {
+    color: #e74c3c;
+    font-weight: bold;
+  }
+  
+  /* 必須項目の入力フィールドスタイル */
+  .required-field {
+    border: 2px solid #e74c3c;
+  }
+  
+  /* ボタン無効化時のスタイル */
+  button:disabled {
+    background-color: #ccc !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+  }
+
   /* ★入力系のトーンを統一 */
   input[type="text"], select, input[type="date"], input[type="time"] {
     border:1px solid #cbd5e1;

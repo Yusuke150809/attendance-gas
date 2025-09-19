@@ -19,6 +19,22 @@
       // ページ読み込み時にボタン状態を更新
       window.addEventListener('load', function() {
         updateButtonStates();
+        
+        // 必須項目の変更時にボタン状態を更新
+        var form = document.getElementById('workRecordForm');
+        if (form) {
+          var fields = ['target_date', 'target_time', 'registration_type', 'student'];
+          fields.forEach(function(fieldName) {
+            var field = form[fieldName];
+            if (field) {
+              field.addEventListener('change', checkMandatoryFieldsDetail);
+              field.addEventListener('input', checkMandatoryFieldsDetail);
+            }
+          });
+          
+          // 初期状態でボタンを無効化
+          checkMandatoryFieldsDetail();
+        }
       });
 
       // 勤怠登録（連打防止付き）
@@ -29,6 +45,24 @@
           return;
         }
         
+        // 必須項目の検証
+        if (!formObject.target_date) {
+          updateWRMessage('対象日付を入力してください');
+          return;
+        }
+        if (!formObject.target_time) {
+          updateWRMessage('対象時刻を入力してください');
+          return;
+        }
+        if (!formObject.registration_type) {
+          updateWRMessage('登録種別を選択してください');
+          return;
+        }
+        if (!formObject.student) {
+          updateWRMessage('生徒名を入力してください');
+          return;
+        }
+        
         isSubmitting = true;
         updateWRMessage('更新中…');
         google.script.run
@@ -36,6 +70,7 @@
             updateWRMessage(msg || '登録しました');
             refreshTimeClocks();
             updateButtonStates(); // ボタン状態を更新
+            checkMandatoryFieldsDetail(); // ボタン状態を再チェック
             isSubmitting = false;
           })
           .withFailureHandler(function(err){
@@ -46,6 +81,39 @@
       }
       function updateWRMessage(message) {
         document.getElementById('wr_submit_message').innerHTML = message;
+      }
+
+      // 必須項目チェック関数（詳細ページ用）
+      function checkMandatoryFieldsDetail() {
+        var form = document.getElementById('workRecordForm');
+        var targetDate = form.target_date.value;
+        var targetTime = form.target_time.value;
+        var registrationType = form.registration_type.value;
+        var student = form.student.value;
+        
+        var isValid = targetDate && targetTime && registrationType && student;
+        
+        // 登録ボタンの状態を更新
+        var registerBtn = document.getElementById('registerBtn');
+        if (registerBtn) {
+          registerBtn.disabled = !isValid;
+        }
+        
+        // 隠しボタンの状態も更新
+        var hiddenButtons = [
+          document.getElementById('clockInBtn'),
+          document.getElementById('breakBeginBtn'),
+          document.getElementById('breakEndBtn'),
+          document.getElementById('clockOutBtn')
+        ];
+        
+        hiddenButtons.forEach(function(btn) {
+          if (btn) {
+            btn.disabled = !isValid;
+          }
+        });
+        
+        return isValid;
       }
 
       // ボタン状態制御
@@ -351,11 +419,19 @@
       <div id="currentStatus" style="margin-bottom: 8px; font-weight: bold; color: #2d87ff;"></div>
       <form id="workRecordForm" onsubmit="return false;">
         <div>
-          <label>対象日時: </label>
-          <input type="date" name="target_date"/>
-          <input type="time" name="target_time"/>
+          <label class="required-label">対象日時（必須）: </label>
+          <input type="date" name="target_date" required/>
+          <input type="time" name="target_time" required/>
           <br/>
-          <label>登録種別</label>
+          <label class="required-label">登録種別（必須）</label>
+          <select name="registration_type" required>
+            <option value="">選択してください</option>
+            <option value="通常">通常</option>
+            <option value="体験">体験</option>
+            <option value="振替">振替</option>
+          </select>
+          <br/>
+          <label>打刻種別</label>
           <select name="target_type">
             <option value="clock_in">出勤</option>
             <option value="break_begin">休憩開始</option>
@@ -372,11 +448,11 @@
             <option value="社会">社会</option>
             <option value="英語">英語</option>
           </select>
-          <label style="margin-left:12px;">生徒名</label>
-          <input type="text" name="student" maxlength="4" placeholder="4文字" />
+          <label style="margin-left:12px;" class="required-label">生徒名（必須）</label>
+          <input type="text" name="student" maxlength="4" placeholder="4文字" required/>
 
           <div class="btn-frame">
-            <button type="button" class="btn"
+            <button type="button" class="btn" id="registerBtn"
                     onclick="handleWorkRecordFormSubmit(this.form)">登録</button>
             <button type="button" onclick="showPasswordBox()" class="btn">勤怠削除</button>
             <div id="wr_submit_message"></div>
