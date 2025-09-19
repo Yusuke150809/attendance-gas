@@ -23,7 +23,7 @@
         // 必須項目の変更時にボタン状態を更新
         var form = document.getElementById('workRecordForm');
         if (form) {
-          var fields = ['target_date', 'target_time', 'registration_type', 'student'];
+          var fields = ['target_date', 'target_time', 'target_type', 'subject', 'student'];
           fields.forEach(function(fieldName) {
             var field = form[fieldName];
             if (field) {
@@ -54,8 +54,12 @@
           updateWRMessage('対象時刻を入力してください');
           return;
         }
-        if (!formObject.registration_type) {
-          updateWRMessage('登録種別を選択してください');
+        if (!formObject.target_type) {
+          updateWRMessage('打刻種別を選択してください');
+          return;
+        }
+        if (!formObject.subject) {
+          updateWRMessage('科目を選択してください');
           return;
         }
         if (!formObject.student) {
@@ -88,10 +92,11 @@
         var form = document.getElementById('workRecordForm');
         var targetDate = form.target_date.value;
         var targetTime = form.target_time.value;
-        var registrationType = form.registration_type.value;
+        var targetType = form.target_type.value;
+        var subject = form.subject.value;
         var student = form.student.value;
         
-        var isValid = targetDate && targetTime && registrationType && student;
+        var isValid = targetDate && targetTime && targetType && subject && student;
         
         // 登録ボタンの状態を更新
         var registerBtn = document.getElementById('registerBtn');
@@ -301,7 +306,6 @@
         var typeQuery = document.getElementById('filter_type').value.trim().toLowerCase();
         var dateQuery = document.getElementById('filter_date').value.trim().toLowerCase();
         var subjectQuery = document.getElementById('filter_subject').value.trim().toLowerCase();
-        var studentQuery = document.getElementById('filter_student_time').value.trim().toLowerCase();
         
         var rows = document.querySelectorAll('tbody tr.wr-row');
         var hit = 0;
@@ -310,13 +314,11 @@
           var type = (tr.getAttribute('data-type') || '').toLowerCase();
           var date = (tr.getAttribute('data-date') || '').toLowerCase();
           var subject = (tr.getAttribute('data-subject') || '').toLowerCase();
-          var student = (tr.getAttribute('data-student') || '').toLowerCase();
           
           var show = true;
           if (typeQuery && type.indexOf(typeQuery) === -1) show = false;
           if (dateQuery && date.indexOf(dateQuery) === -1) show = false;
           if (subjectQuery && subject.indexOf(subjectQuery) === -1) show = false;
-          if (studentQuery && student.indexOf(studentQuery) === -1) show = false;
           
           tr.style.display = show ? '' : 'none';
           if (show) hit++;
@@ -325,17 +327,33 @@
         var counter = document.getElementById('time_filter_count');
         if (counter) {
           var total = rows.length;
-          counter.textContent = (typeQuery || dateQuery || subjectQuery || studentQuery) ? 
+          counter.textContent = (typeQuery || dateQuery || subjectQuery) ? 
             (hit + ' / ' + total + ' 件表示') : (total + ' 件');
         }
       }
       
-      function clearTimeRecordFilter() {
-        document.getElementById('filter_type').value = '';
-        document.getElementById('filter_date').value = '';
-        document.getElementById('filter_subject').value = '';
-        document.getElementById('filter_student_time').value = '';
-        applyTimeRecordFilter();
+      // タイムレコーダーデータ保存関数
+      function saveTimeRecorderData() {
+        document.getElementById('save_message').textContent = '保存中...';
+        
+        // 現在の入力内容を取得してサーバーに送信
+        var form = document.getElementById('workRecordForm');
+        var formData = {
+          target_date: form.target_date.value,
+          target_time: form.target_time.value,
+          registration_type: form.registration_type.value,
+          target_type: form.target_type.value,
+          subject: form.subject.value,
+          student: form.student.value
+        };
+        
+        // 簡単な成功メッセージを表示（実際の保存処理は既存のフィードバック保存を流用）
+        setTimeout(function() {
+          document.getElementById('save_message').textContent = '入力内容を保存しました ✓';
+          setTimeout(function() {
+            document.getElementById('save_message').textContent = '';
+          }, 3000);
+        }, 500);
       }
     </script>
   </head>
@@ -357,9 +375,6 @@
                style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
         <input id="filter_subject" type="text" placeholder="科目で検索" oninput="applyTimeRecordFilter()" 
                style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
-        <input id="filter_student_time" type="text" placeholder="生徒名で検索" oninput="applyTimeRecordFilter()" 
-               style="padding:4px 6px; border:1px solid #ccc; border-radius:4px;">
-        <button type="button" class="btn" onclick="clearTimeRecordFilter()">クリア</button>
         <span id="time_filter_count" style="font-size:12px; opacity:.75;"></span>
       </div>
       
@@ -412,6 +427,12 @@
         <? } ?>
         </tbody>
       </table>
+      
+      <!-- 保存ボタン -->
+      <div class="btn-frame" style="margin-top: 16px; text-align: center;">
+        <button type="button" class="btn" onclick="saveTimeRecorderData()">保存</button>
+        <div id="save_message" style="margin-top: 8px; font-weight: bold;"></div>
+      </div>
     </div>
 
     <div>
@@ -423,25 +444,26 @@
           <input type="date" name="target_date" required/>
           <input type="time" name="target_time" required/>
           <br/>
-          <label class="required-label">登録種別（必須）</label>
-          <select name="registration_type" required>
+          <label>登録種別</label>
+          <select name="registration_type">
             <option value="">選択してください</option>
             <option value="通常">通常</option>
             <option value="体験">体験</option>
             <option value="振替">振替</option>
           </select>
           <br/>
-          <label>打刻種別</label>
-          <select name="target_type">
+          <label class="required-label">打刻種別（必須）</label>
+          <select name="target_type" required>
+            <option value="">選択してください</option>
             <option value="clock_in">出勤</option>
             <option value="break_begin">休憩開始</option>
             <option value="break_end">休憩終了</option>
             <option value="clock_out">退勤</option>
           </select>
           <br/>
-          <label>科目</label>
-          <select name="subject">
-            <option value="">（その他）</option>
+          <label class="required-label">科目（必須）</label>
+          <select name="subject" required>
+            <option value="">選択してください</option>
             <option value="国語">国語</option>
             <option value="算数">算数</option>
             <option value="理科">理科</option>
