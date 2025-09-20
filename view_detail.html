@@ -144,12 +144,10 @@
             
             switch (status.status) {
               case 'working':
-                if (breakBeginBtn) breakBeginBtn.style.display = 'inline-block';
                 if (clockOutBtn) clockOutBtn.style.display = 'inline-block';
                 if (typeSelect) {
-                  typeSelect.querySelector('option[value="break_begin"]').style.display = 'block';
                   typeSelect.querySelector('option[value="clock_out"]').style.display = 'block';
-                  typeSelect.value = 'break_begin';
+                  typeSelect.value = 'clock_out';
                 }
                 break;
               case 'break':
@@ -162,8 +160,10 @@
               case 'off_duty':
               default:
                 if (clockInBtn) clockInBtn.style.display = 'inline-block';
+                if (breakBeginBtn) breakBeginBtn.style.display = 'inline-block';
                 if (typeSelect) {
                   typeSelect.querySelector('option[value="clock_in"]').style.display = 'block';
+                  typeSelect.querySelector('option[value="break_begin"]').style.display = 'block';
                   typeSelect.value = 'clock_in';
                 }
                 break;
@@ -251,7 +251,7 @@
                 +     (r.student ? ('<a href="' + url + '">' + r.student + '</a>') : '')
                 +   '</td>'
                 +   '<td>'
-                +     (r.type === "退勤"
+                +     (r.type === "授業終了"
                        ? '<input type="text" id="fb_'+idx+'" value="'+(r.feedback||'')+'" '
                          + 'style="width:120px;" placeholder="フィードバック" data-row="'+r.row+'">'
                        : (r.feedback || ''))
@@ -386,7 +386,7 @@
               <? } ?>
             </td>
             <td>
-              <? if (r.type === "退勤") { ?>
+              <? if (r.type === "授業終了") { ?>
                 <input type="text" id="fb_<?= i ?>" value="<?= r.feedback || '' ?>"
                        style="width:66%; text-align:center; display:block; margin:0 auto;"
                        placeholder="未回答" data-row="<?= r.row ?>">
@@ -414,21 +414,13 @@
           <input type="date" name="target_date" required/>
           <input type="time" name="target_time" required/>
           <br/>
-          <label>登録種別</label>
-          <select name="registration_type">
-            <option value="">選択してください</option>
-            <option value="通常">通常</option>
-            <option value="体験">体験</option>
-            <option value="振替">振替</option>
-          </select>
-          <br/>
           <label class="required-label">打刻種別（必須）</label>
           <select name="target_type" required>
             <option value="">選択してください</option>
-            <option value="clock_in">出勤</option>
+            <option value="clock_in">授業開始</option>
             <option value="break_begin">休憩開始</option>
             <option value="break_end">休憩終了</option>
-            <option value="clock_out">退勤</option>
+            <option value="clock_out">授業終了</option>
           </select>
           <br/>
           <label class="required-label">科目（必須）</label>
@@ -451,10 +443,10 @@
           </div>
           
           <div style="display: none;">
-            <button type="button" id="clockInBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='clock_in'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">出勤</button>
+            <button type="button" id="clockInBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='clock_in'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">授業開始</button>
             <button type="button" id="breakBeginBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='break_begin'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">休憩開始</button>
             <button type="button" id="breakEndBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='break_end'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">休憩終了</button>
-            <button type="button" id="clockOutBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='clock_out'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">退勤</button>
+            <button type="button" id="clockOutBtn" class="btn" onclick="document.querySelector('select[name=target_type]').value='clock_out'; handleWorkRecordFormSubmit(document.getElementById('workRecordForm'));">授業終了</button>
           </div>
         </div>
       </form>
