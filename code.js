@@ -519,12 +519,19 @@ function getSalaryData() {
     });
   }
 
+  // 従業員IDから名前へのマップを一度だけ作成（パフォーマンス改善）
+  var employees = getEmployees();
+  var empIdToNameMap = {};
+  for (var i = 0; i < employees.length; i++) {
+    empIdToNameMap[employees[i].id] = employees[i].name;
+  }
+
   var empMap = {};
   vals.forEach(function(row){
     var empId   = String(row[0] || "");
     var subject = String(row[3] || "その他");
     var wt      = row[4];
-    var empName = getEmployeeNameById(empId);
+    var empName = empIdToNameMap[empId];
     if (!empName) return;
 
     var minutes = 0;
@@ -567,6 +574,14 @@ function getYearlySalaryData(year) {
   if (last < 2) return [];
 
   var vals = sh.getRange(2, 1, last - 1, 6).getValues();
+
+  // 従業員IDから名前へのマップを一度だけ作成（パフォーマンス改善）
+  var employees = getEmployees();
+  var empIdToNameMap = {};
+  for (var i = 0; i < employees.length; i++) {
+    empIdToNameMap[employees[i].id] = employees[i].name;
+  }
+
   var empMap = {};
 
   vals.forEach(function(row){
@@ -579,7 +594,7 @@ function getYearlySalaryData(year) {
     if (!(dt instanceof Date)) return;
     if (dt.getFullYear() !== year) return;
 
-    var empName = getEmployeeNameById(empId);
+    var empName = empIdToNameMap[empId];
     if (!empName) return;
 
     var minutes = 0;
@@ -661,13 +676,20 @@ function getMonthlySalaryData(year, month) {
   var vals = sh.getRange(2, 1, last - 1, 6).getValues();
   var empMap = {};
 
+  // 従業員IDから名前へのマップを一度だけ作成（パフォーマンス改善）
+  var employees = getEmployees();
+  var empIdToNameMap = {};
+  for (var i = 0; i < employees.length; i++) {
+    empIdToNameMap[employees[i].id] = employees[i].name;
+  }
+
   vals.forEach(function(row){
     var empId   = String(row[0] || "");
     var type    = row[1];
     var dt      = new Date(row[2]);
     var subject = String(row[3] || "その他");
     var wt      = row[4];
-    var empName = getEmployeeNameById(empId);
+    var empName = empIdToNameMap[empId];
     if (!empName) return;
 
     if (dt.getFullYear() !== year || (dt.getMonth()+1) !== month) return;
