@@ -38,7 +38,7 @@
           var empId = String(emp.id || '').replace(/[<>&"]/g, function(m) {
             return {'<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;'}[m];
           });
-          var statusText = String(emp.statusText || '🔴 退勤');
+          var statusText = String(emp.statusText || '🔴 授業終了');
             
           html += '<div class="attendance-card">' +
                     '<div class="status-badge ' + statusClass + '">' + statusText + '</div>' +

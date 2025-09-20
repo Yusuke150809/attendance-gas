@@ -90,7 +90,6 @@
         }
         
         var empId   = document.getElementById("empSelect").value;
-        var registrationType = document.getElementById("registrationTypeSelect").value;
         var targetDate = document.getElementById("targetDate").value;
         var targetTime = document.getElementById("targetTime").value;
         var subject = document.getElementById("subjectSelect").value;
@@ -104,7 +103,7 @@
         if (!subject) { alert("科目を選択してください"); return; }
         if (!student) { alert("生徒名を選択してください"); return; }
 
-        // 退勤時のみフィードバックを取得
+        // 授業終了時のみフィードバックを取得
         if (type === 'clock_out') {
           feedback = document.getElementById("feedbackInput").value;
         }
@@ -118,8 +117,7 @@
           target_type: type,
           subject: subject,
           student: student,
-          feedback: feedback,
-          registration_type: registrationType
+          feedback: feedback
         };
 
         google.script.run.withSuccessHandler(function(msg){
@@ -183,15 +181,15 @@
             // 状態に応じてボタンを表示
             switch (status.status) {
               case 'working': // 勤務中
-                if (breakBeginBtn) breakBeginBtn.style.display = 'block';
                 if (clockOutBtn) clockOutBtn.style.display = 'block';
                 break;
               case 'break': // 休憩中
                 if (breakEndBtn) breakEndBtn.style.display = 'block';
                 break;
-              case 'off_duty': // 退勤
+              case 'off_duty': // 授業終了
               default:
                 if (clockInBtn) clockInBtn.style.display = 'block';
+                if (breakBeginBtn) breakBeginBtn.style.display = 'block';
                 break;
             }
             
@@ -222,7 +220,6 @@
         });
         
         // 必須項目の変更時にボタン状態を更新
-        document.getElementById("registrationTypeSelect").addEventListener('change', checkMandatoryFields);
         document.getElementById("targetDate").addEventListener('change', checkMandatoryFields);
         document.getElementById("targetTime").addEventListener('change', checkMandatoryFields);
         document.getElementById("subjectSelect").addEventListener('change', checkMandatoryFields);
@@ -238,16 +235,10 @@
       <div class="frame">
         <h2>QR打刻ページ</h2>
 
-        <label>従業員：</label>
+        <label class="required-label">従業員（必須）：</label>
         <select id="empSelect"></select>
 
-        <label>登録種別：</label>
-        <select id="registrationTypeSelect">
-          <option value="">選択してください</option>
-          <option value="通常">通常</option>
-          <option value="体験">体験</option>
-          <option value="振替">振替</option>
-        </select>
+
 
         <label class="required-label">対象日時（必須）：</label>
         <div style="display: flex; gap: 8px;">
@@ -265,12 +256,12 @@
           <option value="">選択してください</option>
         </select>
 
-        <button onclick="clock('clock_in')">出勤</button>
+        <button onclick="clock('clock_in')">授業開始</button>
         <button onclick="clock('break_begin')">休憩開始</button>
         <button onclick="clock('break_end')">休憩終了</button>
-        <button onclick="clock('clock_out')">退勤</button>
+        <button onclick="clock('clock_out')">授業終了</button>
 
-        <label>フィードバック（退勤時のみ記録されます）：</label>
+        <label>フィードバック（授業終了時のみ記録されます）：</label>
         <textarea id="feedbackInput" placeholder="今日の授業のメモなど"></textarea>
 
         <div id="msg" class="msg"></div>

@@ -257,7 +257,6 @@ function saveWorkRecord(form) {
   var subject    = form.subject || "";
   var student    = form.student || "";
   var feedback   = form.feedback || "";
-  var registrationType = form.registration_type || "";
 
   // 必須項目の検証
   if (!targetDate) {
@@ -278,10 +277,10 @@ function saveWorkRecord(form) {
 
   var targetType = '';
   switch (form.target_type) {
-    case 'clock_in':    targetType = '出勤'; break;
+    case 'clock_in':    targetType = '授業開始'; break;
     case 'break_begin': targetType = '休憩開始'; break;
     case 'break_end':   targetType = '休憩終了'; break;
-    case 'clock_out':   targetType = '退勤'; break;
+    case 'clock_out':   targetType = '授業終了'; break;
   }
 
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3];
@@ -295,18 +294,15 @@ function saveWorkRecord(form) {
 
   sh.getRange(r, 4).setValue(subject);
 
-  if (targetType === '退勤') { 
+  if (targetType === '授業終了') { 
     recordTotalWorkingHours(sh, r); 
   }
 
   sh.getRange(r, 6).setValue(student);
 
-  if (targetType === '退勤' && feedback) {
+  if (targetType === '授業終了' && feedback) {
     sh.getRange(r, 7).setValue(feedback); 
   }
-
-  // 登録種別を新しい列に保存（例：8列目）
-  sh.getRange(r, 8).setValue(registrationType);
 
   return targetType + "を記録しました";
 }
@@ -315,15 +311,15 @@ function saveWorkRecord(form) {
 // 総労働時間を計算
 function recordTotalWorkingHours(sh, rowOut) {
   const [empIdOut, typeOut, outStr] = sh.getRange(rowOut, 1, 1, 3).getValues()[0];
-  if (typeOut !== '退勤') return;
+  if (typeOut !== '授業終了') return;
 
   const outAt = new Date(outStr);
 
-  // 対応する出勤を探す
+  // 対応する授業開始を探す
   let r = rowOut - 1, inAt;
   for (; r >= 2; r--) {
     const [e, t, s] = sh.getRange(r, 1, 1, 3).getValues()[0];
-    if (e == empIdOut && t === '出勤') {
+    if (e == empIdOut && t === '授業開始') {
       inAt = new Date(s); 
       break; 
     }
@@ -332,7 +328,7 @@ function recordTotalWorkingHours(sh, rowOut) {
 
   if (!inAt) return sh.getRange(rowOut, 5).setValue('');
 
-  // 出勤～退勤の間の休憩を集計
+  // 授業開始～授業終了の間の休憩を集計
   const between = sh.getRange(r, 1, rowOut - r + 1, 3).getValues();
   let breakMs = 0, last = null;
 
@@ -778,7 +774,7 @@ function getCurrentEmployeeStatus(empId) {
   if (lastRow < 2) {
     return {
       status: 'off_duty',
-      statusText: '🔴 退勤',
+      statusText: '🔴 授業終了',
       lastAction: null,
       lastTime: null
     };
@@ -799,11 +795,11 @@ function getCurrentEmployeeStatus(empId) {
   }
   
   var status = 'off_duty';
-  var statusText = '🔴 退勤';
+  var statusText = '🔴 授業終了';
   
   if (latestRecord) {
     switch (latestRecord.type) {
-      case '出勤':
+      case '授業開始':
       case '休憩終了':
         status = 'working';
         statusText = '🟢 勤務中';
@@ -812,10 +808,10 @@ function getCurrentEmployeeStatus(empId) {
         status = 'break';
         statusText = '☕ 休憩';
         break;
-      case '退勤':
+      case '授業終了':
       default:
         status = 'off_duty';
-        statusText = '🔴 退勤';
+        statusText = '🔴 授業終了';
         break;
     }
   }
@@ -834,13 +830,13 @@ function getAllEmployeesAttendanceStatus() {
   var lastRow = sh.getLastRow();
   
   if (lastRow < 2) {
-    // データがない場合、全員退勤状態
+    // データがない場合、全員授業終了状態
     return employees.map(function(emp) {
       return {
         id: emp.id,
         name: emp.name,
         status: 'off_duty',
-        statusText: '🔴 退勤',
+        statusText: '🔴 授業終了',
         lastAction: null,
         lastTime: null
       };
@@ -867,11 +863,11 @@ function getAllEmployeesAttendanceStatus() {
     }
     
     var status = 'off_duty';
-    var statusText = '🔴 退勤';
+    var statusText = '🔴 授業終了';
     
     if (latestRecord) {
       switch (latestRecord.type) {
-        case '出勤':
+        case '授業開始':
         case '休憩終了':
           status = 'working';
           statusText = '🟢 勤務中';
@@ -880,10 +876,10 @@ function getAllEmployeesAttendanceStatus() {
           status = 'break';
           statusText = '☕ 休憩';
           break;
-        case '退勤':
+        case '授業終了':
         default:
           status = 'off_duty';
-          statusText = '🔴 退勤';
+          statusText = '🔴 授業終了';
           break;
       }
     }
@@ -930,11 +926,11 @@ function getLessonSessions() {
     var fb   = rows[i][6] || "";
     var stu  = rows[i][5] || "";
 
-    if (type === '出勤') {
+    if (type === '授業開始') {
       currentStart = dt;
       currentSubject = subj;
     }
-    if (type === '退勤' && currentStart) {
+    if (type === '授業終了' && currentStart) {
       var startStr = Utilities.formatDate(currentStart, "Asia/Tokyo", "yyyy-MM-dd HH:mm");
       var endStr   = Utilities.formatDate(dt, "Asia/Tokyo", "yyyy-MM-dd HH:mm");
 
@@ -1563,7 +1559,7 @@ function getResponseRateAnalysis() {
     var sessions = {};
     var currentSessions = {};
 
-    // 出勤・退勤ペアを作成
+    // 授業開始・授業終了ペアを作成
     vals.forEach(function(r) {
       var empId = r[0];
       var type = r[1];
@@ -1575,14 +1571,14 @@ function getResponseRateAnalysis() {
 
       var empStudentKey = empId + "_" + student;
 
-      if (type === '出勤') {
+      if (type === '授業開始') {
         currentSessions[empStudentKey] = {
           start: datetime,
           subject: subject,
           student: student,
           empId: empId
         };
-      } else if (type === '退勤' && currentSessions[empStudentKey]) {
+      } else if (type === '授業終了' && currentSessions[empStudentKey]) {
         var startStr = Utilities.formatDate(currentSessions[empStudentKey].start, "Asia/Tokyo", "yyyy-MM-dd HH:mm");
         var sessionKey = startStr + "_" + student;
         sessions[sessionKey] = true;
