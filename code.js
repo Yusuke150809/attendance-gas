@@ -744,22 +744,28 @@ function getAvailableMonths() {
 }
 // 科目一覧を返す
 function getSubjects() {
+  // 基本科目リスト
+  var baseSubjects = ["国語", "算数", "理科", "社会", "英語", "その他"];
+  
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴シート
   var last = sh.getLastRow();
-  if (last < 2) return [];
   
-  var vals = sh.getRange(2, 4, last - 1, 1).getValues(); // D列=科目
-  var seen = {};
-  var list = [];
-  vals.forEach(function(r){
-    var subj = String(r[0] || "").trim();
-    if (subj && !seen[subj]) {
-      seen[subj] = true;
-      list.push(subj);
-    }
-  });
-  list.sort();
-  return list;
+  var additionalSubjects = [];
+  if (last >= 2) {
+    var vals = sh.getRange(2, 4, last - 1, 1).getValues(); // D列=科目
+    var seen = {};
+    vals.forEach(function(r){
+      var subj = String(r[0] || "").trim();
+      if (subj && !seen[subj] && baseSubjects.indexOf(subj) === -1) {
+        seen[subj] = true;
+        additionalSubjects.push(subj);
+      }
+    });
+  }
+  
+  // 基本科目と追加科目を結合
+  var allSubjects = baseSubjects.concat(additionalSubjects.sort());
+  return allSubjects;
 }
 
 /**
