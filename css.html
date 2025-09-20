@@ -3,6 +3,10 @@
     color:#333;                 
     background:#f8f9fb;    /* カラー選択ツールから */   
     font-family:'Segoe UI','Helvetica Neue',sans-serif;
+    margin: 0;
+    padding: 20px 40px;    /* 上下左右に余白を追加 */
+    min-height: 100vh;     /* 最小高さを画面の高さに設定 */
+    box-sizing: border-box;
   }
 
   table {
@@ -10,6 +14,9 @@
     box-shadow:0 2px 8px rgba(0,0,0,.05);
     border:1px solid #e5e7eb;
     width:100%;
+    margin: 20px 0;      /* 表の上下に余白追加 */
+    max-width: 100%;     /* レスポンシブ対応 */
+    overflow-x: auto;    /* 横スクロール対応 */
   } /* 表の見た目を改善 */
 
   th, td {
@@ -99,19 +106,40 @@
     font-size: 48px;
     font-weight: 900;
     color: #333;
-    margin: 8px 0 24px;
+    margin: 40px 0 60px;    /* 上下マージンを増加 */
     text-align: center;
     letter-spacing: 0.05em;
   }
 
+  /* 汎用的な余白クラス */
+  .section-spacing {
+    margin: 40px 0;         /* セクション間の標準的な余白 */
+  }
+  
+  .content-padding {
+    padding: 20px 40px;     /* コンテンツ内の余白 */
+  }
+
+  /* ページ全体のコンテナ */
+  .page-container {
+    max-width: 1200px;      /* 最大幅を設定 */
+    margin: 0 auto;         /* 中央寄せ */
+    padding: 20px 40px;     /* 左右の余白 */
+  }
+
   /* 従業員カード一覧 */
   .emp-list h3 {
-    margin: 12px 0 8px;
+    margin: 32px 0 20px;    /* 見出しの上下マージンを大きく */
+    font-size: 24px;        /* フォントサイズを大きく */
+  }
+  .emp-list {
+    margin: 40px 0;         /* セクション間の余白を追加 */
   }
   .emp-card-wrap {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;              /* カード間の余白を増加 */
+    margin: 20px 0;         /* 上下に余白追加 */
   }
   .emp-card {
     display: inline-flex;
@@ -311,6 +339,135 @@
     }
   }
 
+  /* お知らせセクションのスタイル */
+  .news-section {
+    margin: 40px 0;
+    padding: 20px;
+    background: #fff;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,.05);
+  }
+
+  .news-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #333;
+    margin: 0 0 20px 0;
+    text-align: center;
+  }
+
+  .news-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .news-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 16px;  /* スマホ表示を意識して大きめに */
+  }
+
+  .news-item:last-child {
+    border-bottom: none;
+  }
+
+  .news-date {
+    flex-shrink: 0;
+    font-weight: 600;
+    color: #2d87ff;
+    background: #f4f8ff;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .news-content {
+    flex: 1;
+    color: #333;
+    line-height: 1.5;
+  }
+
+  /* モバイル表示での調整 */
+  @media (max-width: 600px) {
+    .news-item {
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .news-date {
+      align-self: flex-start;
+    }
+  }
+
+  /* 管理者用のお知らせ入力エリア */
+  .news-input-section {
+    margin: 40px 0;
+    padding: 30px;
+    background: #fff;
+    border: 2px solid #2d87ff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(45, 135, 255, 0.15);
+  }
+
+  .news-input-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #2d87ff;
+    margin: 0 0 20px 0;
+    text-align: center;
+  }
+
+  .news-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .news-form label {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+  }
+
+  .news-form input[type="date"] {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 16px;
+  }
+
+  .news-form textarea {
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 16px;
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+  }
+
+  .news-save-btn {
+    background: #2d87ff;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 24px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .news-save-btn:hover {
+    background: #1c5fc9;
+  }
 
 
 </style>

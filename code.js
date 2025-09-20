@@ -1629,3 +1629,84 @@ function getResponseRateAnalysis() {
     return { totalSessions: 0, totalResponses: 0, responseRate: 0 };
   }
 }
+
+// ===== お知らせ機能 =====
+
+/**
+ * お知らせを保存する
+ */
+function saveNews(date, content) {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName("お知らせ");
+    
+    // シートが存在しない場合は作成
+    if (!sh) {
+      sh = ss.insertSheet("お知らせ");
+      sh.getRange(1, 1).setValue("日付");
+      sh.getRange(1, 2).setValue("内容");
+      // ヘッダー行のスタイル設定
+      sh.getRange(1, 1, 1, 2).setBackground("#2d87ff").setFontColor("#fff").setFontWeight("bold");
+    }
+    
+    // 新しいお知らせを追加
+    sh.appendRow([new Date(date), content]);
+    
+    return "お知らせを保存しました。";
+  } catch (error) {
+    Logger.log("saveNews エラー: " + error.toString());
+    return "保存に失敗しました: " + error.message;
+  }
+}
+
+/**
+ * 最新のお知らせを取得する（最大5件）
+ */
+function getRecentNews() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    var sh = ss.getSheetByName("お知らせ");
+    
+    if (!sh) {
+      return []; // シートが存在しない場合は空配列を返す
+    }
+    
+    var lastRow = sh.getLastRow();
+    if (lastRow < 2) {
+      return []; // データが存在しない場合は空配列を返す
+    }
+    
+    // 全データを取得
+    var data = sh.getRange(2, 1, lastRow - 1, 2).getValues();
+    
+    // 日付順でソート（新しい順）
+    data.sort(function(a, b) {
+      return new Date(b[0]) - new Date(a[0]);
+    });
+    
+    // 最大5件に制限
+    var recentNews = data.slice(0, 5);
+    
+    // 日付をフォーマットして返す
+    return recentNews.map(function(row) {
+      var date = row[0];
+      var content = row[1];
+      
+      // 日付をYYYY/MM/DD形式でフォーマット
+      var formattedDate = "";
+      if (date instanceof Date) {
+        formattedDate = (date.getMonth() + 1) + "/" + date.getDate();
+      } else {
+        formattedDate = String(date);
+      }
+      
+      return {
+        date: formattedDate,
+        content: String(content)
+      };
+    });
+  } catch (error) {
+    Logger.log("getRecentNews エラー: " + error.toString());
+    return [];
+  }
+}
