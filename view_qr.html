@@ -44,6 +44,8 @@
     <script>
       // ページ読み込み時に従業員・科目・生徒一覧を取得
       function loadData() {
+        var selectedEmpId = "<?= selectedEmpId || '' ?>";
+        
         // 従業員一覧
         google.script.run.withSuccessHandler(function(list){
           var sel = document.getElementById("empSelect");
@@ -54,6 +56,13 @@
             opt.textContent = emp.name;
             sel.appendChild(opt);
           });
+          
+          // 従業員IDが指定されている場合は自動選択
+          if (selectedEmpId) {
+            sel.value = selectedEmpId;
+            // 選択後にボタン状態を更新
+            updateQRButtonStates();
+          }
         }).getEmployees();
 
         // 科目一覧
@@ -267,6 +276,9 @@
         <div id="msg" class="msg"></div>
         <div class="btn-frame" style="margin-top:16px; text-align:center;">
           <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+          <? if (selectedEmpId) { ?>
+            <a href="<?= getAppUrl() ?>?empId=<?= selectedEmpId ?>" class="btn" style="margin-left: 10px;">詳細画面へ</a>
+          <? } ?>
         </div>
       </div>
     </div>
