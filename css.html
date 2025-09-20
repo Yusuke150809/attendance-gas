@@ -9,6 +9,22 @@
     box-sizing: border-box;
   }
 
+  /* モバイル対応 */
+  @media (max-width: 768px) {
+    body {
+      padding: 15px 20px;  /* モバイルでは余白を少し小さく */
+    }
+    
+    .page-container {
+      padding: 15px 20px;
+    }
+    
+    .company-title {
+      font-size: 36px;      /* モバイルでタイトルサイズを調整 */
+      margin: 20px 0 40px;
+    }
+  }
+
   table {
     background:#fff;
     box-shadow:0 2px 8px rgba(0,0,0,.05);

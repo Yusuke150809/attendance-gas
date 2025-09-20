@@ -97,26 +97,29 @@
   </head>
 
   <body>
-    <div class="company-title">開発塾 - 給与計算ページ</div>
+    <div class="page-container">
+      <div class="company-title">開発塾 - 給与計算ページ</div>
 
-    <h3 id="monthlyLabel"></h3>
+      <h3 id="monthlyLabel"></h3>
 
-    <div>
-      <select id="monthSelect"
-        onchange="var p=this.value.split('-'); loadMonthlySalary(parseInt(p[0]),parseInt(p[1]))">
-      </select>
-    </div>
+      <div class="section-spacing">
+        <select id="monthSelect"
+          onchange="var p=this.value.split('-'); loadMonthlySalary(parseInt(p[0]),parseInt(p[1]))"
+          style="padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px; min-width: 200px;">
+        </select>
+      </div>
 
     <div id="monthlySalaryArea" style="margin-top:12px;"></div>
 
     <!-- 年度別集計ページへのリンク -->
-    <div class="btn-frame" style="margin-top:16px;">
-      <a href="<?= getAppUrl() ?>?page=yearly">年度別集計ページへ</a>
+    <div class="btn-frame section-spacing" style="text-align: center;">
+      <a href="<?= getAppUrl() ?>?page=yearly" class="btn">年度別集計ページへ</a>
     </div>
 
-    <div class="btn-frame" style="margin-top:8px;">
-      <a href="<?= getAppUrl() ?>?page=admin">塾長メニューに戻る</a>
-      <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+    <div class="btn-frame section-spacing" style="text-align: center; display: flex; gap: 12px; justify-content: center;">
+      <a href="<?= getAppUrl() ?>?page=admin" class="btn">塾長メニューに戻る</a>
+      <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+    </div>
     </div>
   </body>
 </html>
