@@ -927,9 +927,8 @@ function getAllEmployeesAttendanceStatus() {
 }
 
 function getLessonSessions() {
-  var empId   = getSelectedEmpId();
   var student = getSelectedStudent();
-  if (!empId || !student) return [];
+  if (!student) return [];
 
   var sh = SpreadsheetApp.getActiveSpreadsheet().getSheets()[3]; // 打刻履歴
   var last = sh.getLastRow();
@@ -937,7 +936,7 @@ function getLessonSessions() {
 
   var vals = sh.getRange(2, 1, last - 1, 7).getValues(); // A〜G列
   var rows = vals.filter(function(r){
-    return String(r[0]) === String(empId) && String(r[5]) === String(student);
+    return String(r[5]) === String(student);
   }).sort(function(a,b){
     return new Date(a[2]) - new Date(b[2]);
   });
@@ -949,6 +948,7 @@ function getLessonSessions() {
   var currentStart = null;
   var currentSubject = "";
   for (var i = 0; i < rows.length; i++) {
+    var empId = rows[i][0]; // 従業員IDを取得（表示用）
     var type = rows[i][1];
     var dt   = new Date(rows[i][2]);
     var subj = rows[i][3] || "—";
