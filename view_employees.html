@@ -5,8 +5,9 @@
     <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
   </head>
   <body>
-    <h3>従業員一覧</h3>
-    <div class="emp-list">
+    <div class="page-container">
+      <h3>従業員一覧</h3>
+      <div class="emp-list section-spacing">
       <div class="emp-card-wrap">
         <? var record = getEmployees();
            for (var i = 0; i < record.length; i++) {
@@ -20,10 +21,11 @@
           </a>
         <? } ?>
       </div>
-    </div>
+      </div>
 
-    <div style="margin-top:20px;">
-      <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+      <div class="section-spacing" style="text-align: center;">
+        <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+      </div>
     </div>
   </body>
 </html>

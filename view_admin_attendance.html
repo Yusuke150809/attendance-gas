@@ -58,17 +58,19 @@
     </script>
   </head>
   <body>
-    <div class="company-title">開発塾 - 勤務状況ページ</div>
-    <p>講師の勤務状況をリアルタイムで確認できます。</p>
+    <div class="page-container">
+      <div class="company-title">開発塾 - 勤務状況ページ</div>
+      <p>講師の勤務状況をリアルタイムで確認できます。</p>
     
     <div id="attendance-container">
       <p>データを読み込み中...</p>
     </div>
 
-    <div class="btn-frame" style="margin-top:16px;">
+    <div class="btn-frame section-spacing" style="text-align: center; display: flex; gap: 12px; justify-content: center; align-items: center;">
       <button onclick="loadAttendanceData()" class="btn">更新</button>
-      <a href="<?= getAppUrl() ?>?page=admin">塾長メニューに戻る</a>
-      <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+      <a href="<?= getAppUrl() ?>?page=admin" class="btn">塾長メニューに戻る</a>
+      <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
+    </div>
     </div>
   </body>
 </html>

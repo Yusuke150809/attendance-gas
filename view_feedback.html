@@ -158,10 +158,13 @@
   </head>
 
   <body>
-    <h3>フィードバックページ</h3>
+    <div class="page-container">
+      <h3>フィードバックページ</h3>
 
-    <div>従業員: <span id="empName"><?= getEmployeeName() ?></span></div>
-    <div>生徒名: <span id="selectedStudent"><?= getSelectedStudent() ?></span></div>
+      <div class="section-spacing">
+        <div style="margin-bottom: 12px;">従業員: <span id="empName"><?= getEmployeeName() ?></span></div>
+        <div>生徒名: <span id="selectedStudent"><?= getSelectedStudent() ?></span></div>
+      </div>
 
     <!-- 🔍 フィルタバー -->
     <div class="filter-bar">
@@ -189,13 +192,14 @@
     </table>
 
     <!-- 保存ボタン -->
-    <div class="btn-frame" style="margin-top: 16px; text-align: center;">
+    <div class="btn-frame section-spacing" style="text-align: center;">
       <button type="button" class="btn" onclick="saveAllFeedback()">フィードバック保存</button>
       <div id="feedback_save_message" style="margin-top: 8px; font-weight: bold;"></div>
     </div>
 
-    <div class="btn-frame" style="margin-top:16px;">
-      <a href="<?= getAppUrl() ?>">ホームへ戻る</a>
+    <div class="btn-frame section-spacing" style="text-align: center;">
+      <a href="<?= getAppUrl() ?>" class="btn">ホームへ戻る</a>
+    </div>
     </div>
   </body>
 </html>

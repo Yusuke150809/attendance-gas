@@ -122,11 +122,54 @@
         } else {
           document.getElementById("adminContent").style.display = "block";
         }
+        
+        // 今日の日付をデフォルトで設定
+        var today = new Date();
+        var formattedDate = today.getFullYear() + '-' + 
+                          String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                          String(today.getDate()).padStart(2, '0');
+        document.getElementById("newsDate").value = formattedDate;
       });
+      
+      // お知らせ保存機能
+      function saveNewsData() {
+        var date = document.getElementById("newsDate").value;
+        var content = document.getElementById("newsContent").value.trim();
+        var messageDiv = document.getElementById("newsMessage");
+        
+        if (!date) {
+          messageDiv.style.color = "red";
+          messageDiv.textContent = "日付を選択してください。";
+          return;
+        }
+        
+        if (!content) {
+          messageDiv.style.color = "red";
+          messageDiv.textContent = "内容を入力してください。";
+          return;
+        }
+        
+        messageDiv.style.color = "#666";
+        messageDiv.textContent = "保存中...";
+        
+        google.script.run
+          .withSuccessHandler(function(result) {
+            messageDiv.style.color = "green";
+            messageDiv.textContent = result;
+            // 成功時は内容をクリア
+            document.getElementById("newsContent").value = "";
+          })
+          .withFailureHandler(function(error) {
+            messageDiv.style.color = "red";
+            messageDiv.textContent = "保存に失敗しました: " + error.message;
+          })
+          .saveNews(date, content);
+      }
     </script>
   </head>
   <body>
-    <div class="company-title">開発塾 - 塾長ページ</div>
+    <div class="page-container">
+      <div class="company-title">開発塾 - 塾長ページ</div>
 
     <!-- 背景オーバーレイ -->
     <div id="overlay"></div>
@@ -164,9 +207,27 @@
           </a>
         </div>
       </div>
+      
+      <!-- お知らせ入力セクション -->
+      <div class="news-input-section">
+        <h3 class="news-input-title">お知らせ入力</h3>
+        <div class="news-form">
+          <label for="newsDate">日付：</label>
+          <input type="date" id="newsDate" required>
+          
+          <label for="newsContent">内容：</label>
+          <textarea id="newsContent" placeholder="お知らせの内容を入力してください..." required></textarea>
+          
+          <button class="news-save-btn" onclick="saveNewsData()">保存</button>
+          
+          <div id="newsMessage" style="margin-top: 12px; text-align: center; font-weight: bold;"></div>
+        </div>
+      </div>
+      
       <div class="btn-frame" style="margin-top:16px;">
         <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
       </div>
+    </div>
     </div>
   </body>
 </html>

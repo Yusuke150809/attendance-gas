@@ -336,10 +336,11 @@
   </head>
 
   <body>
-    <div>
-      <span>名前:</span>
-      <span><?= getEmployeeName() ?></span>
-    </div>
+    <div class="page-container">
+      <div class="section-spacing">
+        <span>名前:</span>
+        <span><?= getEmployeeName() ?></span>
+      </div>
 
     <div>
       <h3>今月のタイムレコーダー履歴</h3>
@@ -461,9 +462,10 @@
       <p>削除用パスワードを入力してください：</p>
       <input type="password" id="deletePw" style="width:100%; margin-bottom:8px;">
       <div style="text-align:right;">
-        <button onclick="confirmDelete()">OK</button>
-        <button onclick="hidePasswordBox()">キャンセル</button>
+        <button onclick="confirmDelete()" class="btn">OK</button>
+        <button onclick="hidePasswordBox()" class="btn-cancel">キャンセル</button>
       </div>
+    </div>
     </div>
   </body>
 </html>

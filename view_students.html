@@ -20,15 +20,17 @@
     </script>
   </head>
   <body>
-    <div class="company-title">開発塾</div>
+    <div class="page-container">
+      <div class="company-title">開発塾</div>
 
-    <div class="emp-list">
+      <div class="emp-list section-spacing">
       <h3>生徒一覧</h3>
 
       <!-- 検索（任意） -->
-      <div style="margin:8px 0 12px;">
+      <div style="margin: 20px 0;">
         <input type="text" placeholder="生徒名で絞り込み"
-               oninput="filterStudents(this.value)" />
+               oninput="filterStudents(this.value)" 
+               style="width: 100%; max-width: 300px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 16px;" />
       </div>
 
       <div class="emp-card-wrap">
@@ -50,9 +52,10 @@
         <? } ?>
       </div>
 
-      <div class="btn-frame" style="margin-top:16px;">
-        <a href="<?= getAppUrl() ?>">ホーム画面に戻る</a>
+      <div class="btn-frame section-spacing" style="text-align: center;">
+        <a href="<?= getAppUrl() ?>" class="btn">ホーム画面に戻る</a>
       </div>
+    </div>
     </div>
   </body>
 </html>

@@ -93,10 +93,13 @@
   </head>
 
   <body>
-    <h3>フィードバックページ（従業員用）</h3>
+    <div class="page-container">
+      <h3>フィードバックページ（従業員用）</h3>
 
-    <div>従業員: <span id="empName"><?= getEmployeeName() ?></span></div>
-    <div>生徒名: <span id="selectedStudent"><?= getSelectedStudent() ?></span></div>
+      <div class="section-spacing">
+        <div style="margin-bottom: 12px;">従業員: <span id="empName"><?= getEmployeeName() ?></span></div>
+        <div>生徒名: <span id="selectedStudent"><?= getSelectedStudent() ?></span></div>
+      </div>
 
     <!-- 🔍 フィルタバー -->
     <div class="filter-bar">
@@ -122,9 +125,10 @@
       </tbody>
     </table>
 
-    <div class="btn-frame" style="margin-top:16px;">
-      <a href="<?= getAppUrl() ?>?empId=<?= getSelectedEmpId() ?>">タイムレコーダーへ戻る</a>
-      <a href="<?= getAppUrl() ?>">ホームへ戻る</a>
+    <div class="btn-frame section-spacing" style="text-align: center; display: flex; gap: 12px; justify-content: center;">
+      <a href="<?= getAppUrl() ?>?empId=<?= getSelectedEmpId() ?>" class="btn">タイムレコーダーへ戻る</a>
+      <a href="<?= getAppUrl() ?>" class="btn">ホームへ戻る</a>
+    </div>
     </div>
   </body>
 </html>
