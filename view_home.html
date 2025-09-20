@@ -2,44 +2,98 @@
 <html>
   <head>
     <base target="_top">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <?!= HtmlService.createHtmlOutputFromFile('css').getContent(); ?>
+    <style>
+      /* Home画面専用のセンタリングスタイル */
+      .home-container {
+        max-width: 600px;
+        margin: 0 auto;
+        padding: 20px;
+        text-align: center;
+      }
+      
+      .home-section {
+        margin-bottom: 32px;
+      }
+      
+      .home-section h3 {
+        margin-bottom: 16px;
+        font-size: 24px;
+        color: #333;
+      }
+      
+      .home-button {
+        display: inline-block;
+        width: 100%;
+        max-width: 320px;
+        padding: 20px 24px;
+        margin: 8px;
+        text-decoration: none;
+        background: #fff;
+        border: 3px solid #2d87ff;
+        border-radius: 16px;
+        box-shadow: 0 4px 12px rgba(45, 135, 255, 0.15);
+        transition: all 0.2s ease;
+        color: #111;
+        font-weight: 700;
+        font-size: 18px;
+      }
+      
+      .home-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(45, 135, 255, 0.25);
+        background: #f8f9fb;
+      }
+      
+      .home-button-icon {
+        display: inline-block;
+        background: #2d87ff;
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-weight: 800;
+        font-size: 16px;
+        margin-right: 12px;
+        min-width: 60px;
+        text-align: center;
+      }
+      
+      .company-title {
+        margin-bottom: 40px;
+      }
+    </style>
   </head>
   <body>
-    <!-- 会社タイトル -->
-    <div class="company-title">開発塾</div>
+    <div class="home-container">
+      <!-- 会社タイトル -->
+      <div class="company-title">開発塾</div>
 
-    <!-- 生徒用ページ -->
-    <div class="emp-list" style="margin-bottom:16px;">
-      <h3>生徒用ページ</h3>
-      <div class="emp-card-wrap">
-        <a class="emp-card" href="<?= getAppUrl() ?>?page=students">
-          <span class="emp-id">STU</span>
-          <span class="emp-name">生徒ページへ</span>
+      <!-- 生徒用ページ -->
+      <div class="home-section">
+        <h3>生徒用ページ</h3>
+        <a class="home-button" href="<?= getAppUrl() ?>?page=students">
+          <span class="home-button-icon">STU</span>
+          <span>生徒ページへ</span>
         </a>
       </div>
-    </div>
 
-    <!-- 従業員用ページ -->
-    <div class="emp-list" style="margin-bottom:16px;">
-      <h3>従業員用ページ</h3>
-      <div class="emp-card-wrap">
-        <a class="emp-card" href="<?= getAppUrl() ?>?page=employees">
-          <span class="emp-id">EMP</span>
-          <span class="emp-name">従業員ページへ</span>
+      <!-- 従業員用ページ -->
+      <div class="home-section">
+        <h3>従業員用ページ</h3>
+        <a class="home-button" href="<?= getAppUrl() ?>?page=employees">
+          <span class="home-button-icon">EMP</span>
+          <span>従業員ページへ</span>
         </a>
       </div>
-    </div>
 
-    <!-- 塾長ページ -->
-    <div class="emp-list">
-      <h3>塾長ページ</h3>
-      <div class="emp-card-wrap">
-        <a class="emp-card" href="<?= getAppUrl() ?>?page=admin&from=home">
-  <span class="emp-id">ADM</span>
-  <span class="emp-name">塾長ページへ</span>
-</a>
-
-        
+      <!-- 塾長ページ -->
+      <div class="home-section">
+        <h3>塾長ページ</h3>
+        <a class="home-button" href="<?= getAppUrl() ?>?page=admin&from=home">
+          <span class="home-button-icon">ADM</span>
+          <span>塾長ページへ</span>
+        </a>
       </div>
     </div>
   </body>

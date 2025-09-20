@@ -12,7 +12,7 @@
            for (var i = 0; i < record.length; i++) {
              var id   = record[i]["id"];
              var name = record[i]["name"];
-             var url  = getAppUrl() + "?empId=" + encodeURIComponent(id);
+             var url  = getAppUrl() + "?page=qr&empId=" + encodeURIComponent(id);
         ?>
           <a class="emp-card" href="<?= url ?>">
             <span class="emp-id"><?= id ?></span>

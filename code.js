@@ -42,8 +42,9 @@ function doGet(e) {
 
   // QRコードページ 
   if (page === 'qr') {
-    return HtmlService.createTemplateFromFile('view_qr')
-      .evaluate().setTitle('QR打刻ページ');
+    var tmpl = HtmlService.createTemplateFromFile('view_qr');
+    tmpl.selectedEmpId = selectedEmpId || "";
+    return tmpl.evaluate().setTitle('QR打刻ページ');
   }
 
   // フィードバック(従業員)
