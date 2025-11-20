@@ -2,7 +2,7 @@ function doGet(e) {
   var selectedEmpId = e.parameter.empId;
   var student       = e.parameter.student;
   var page          = e.parameter.page; 
-  var from          = e.parameter.from || ""; 
+  var from          = e.parameter.from || "";
 
   // 生徒ページ
   if (page === 'students') {
